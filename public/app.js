@@ -258,8 +258,24 @@ function renderEntryList() {
   entryList.innerHTML = visible.map((entry) => {
     const activeClass = entry.id === activeId ? " active" : "";
     const text = plainTextFromHtml(entry.body).slice(0, 46) || "还没有正文";
-    return `<button class="entry-card${activeClass}" data-id="${entry.id}" type="button"><span class="directory-line"><strong>${escapeHtml(entry.title || "没有标题")}</strong><em class="saved-mark">已保存</em></span><span>${formatDateLabel(entry.date)} · ${escapeHtml(entry.mood || "心情")}</span><span>${escapeHtml(text)}</span></button>`;
+    return `<article class="entry-card${activeClass}" data-id="${entry.id}"><button class="entry-open-button" data-open-entry="${entry.id}" type="button"><span class="directory-line"><strong>${escapeHtml(entry.title || "没有标题")}</strong><em class="saved-mark">已保存</em></span><span>${formatDateLabel(entry.date)} · ${escapeHtml(entry.mood || "心情")}</span><span>${escapeHtml(text)}</span></button><button class="entry-delete-button" data-delete-entry="${entry.id}" type="button" aria-label="删除这篇日记">删除</button></article>`;
   }).join("");
+}
+function deleteEntry(entryId) {
+  const entry = entries.find((item) => item.id === entryId);
+  if (!entry) return;
+  const title = entry.title || "没有标题";
+  const confirmed = window.confirm(`确定要删除《${title}》这篇日记吗？删除后不能从目录里恢复。`);
+  if (!confirmed) return;
+  entries = entries.filter((item) => item.id !== entryId);
+  if (!entries.length) {
+    createEntry(false);
+  } else if (activeId === entryId) {
+    activeId = entries[0].id;
+  }
+  saveEntries();
+  renderAll();
+  setStatus("已经删除这篇日记。");
 }
 function renderImages() {
   const entry = getActiveEntry();
@@ -483,10 +499,15 @@ function bindEvents() {
   $("#voiceBtn").addEventListener("click", toggleVoice);
   $("#imageInput").addEventListener("change", (event) => handleImages(event.target.files));
   entryList.addEventListener("click", (event) => {
-    const card = event.target.closest(".entry-card");
-    if (!card) return;
+    const deleteButton = event.target.closest("[data-delete-entry]");
+    if (deleteButton) {
+      deleteEntry(deleteButton.dataset.deleteEntry);
+      return;
+    }
+    const openButton = event.target.closest("[data-open-entry]");
+    if (!openButton) return;
     collectActiveEntry();
-    activeId = card.dataset.id;
+    activeId = openButton.dataset.openEntry;
     saveEntries();
     renderAll();
   });
