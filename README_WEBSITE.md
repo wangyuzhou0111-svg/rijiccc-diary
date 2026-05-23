@@ -24,6 +24,41 @@
 
 注意：这个地址只能在这台电脑上用。如果关掉本机网站服务，就需要重新开启。
 
+## 启动带 DeepSeek 的本机网站
+
+现在网站有一个本地后端 `server.js`，它负责安全调用 DeepSeek。
+
+启动方式：
+
+```bash
+cd /Users/wangyuzhou/Documents/rijiccc.kingstar.xin
+node server.js
+```
+
+然后打开：
+
+`http://127.0.0.1:7811/`
+
+## DeepSeek 配置
+
+不要把 Token 写进 `app.js` 或 `index.html`。
+
+可以复制 `.env.example` 为 `.env.local`，再把 DeepSeek Token 放进去：
+
+```bash
+cp .env.example .env.local
+```
+
+`.env.local` 不会提交到 Git 仓库。
+
+需要的配置：
+
+```text
+DEEPSEEK_API_KEY=你的 DeepSeek Token
+DEEPSEEK_MODEL=deepseek-chat
+DEEPSEEK_BASE_URL=https://api.deepseek.com
+```
+
 ## 文件说明
 
 - `index.html`：网页的骨架。
@@ -52,7 +87,7 @@
 - 列表和格式整理。
 - 上传图片。
 - 图片说明和删除图片。
-- AI 润色预览。
+- DeepSeek AI 润色。
 - 语音输入尝试。
 - 写作提示和日记模板。
 - 导出 Markdown。
@@ -71,4 +106,4 @@
 
 API 密钥像家门钥匙，如果放在网页代码里，别人打开网页时可能看见它。
 
-以后要接入真正的 `Xiaomi MiMo-V2.5`，建议用一个安全的小后端来调用 AI。
+现在已经加了本地后端 `server.js`，用它来安全调用 DeepSeek。

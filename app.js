@@ -242,6 +242,36 @@ function makePolish(text, mode) {
   if (mode === "fun") result = `${result}\n\n我还想补一句：这件事让我觉得很有意思，也让我更想继续观察。`;
   return result;
 }
+async function requestAiPolish(mode) {
+  const text = plainTextFromHtml(editor.innerHTML).trim();
+  if (!text) {
+    aiSuggestion = "";
+    aiPreview.textContent = "先写一点日记，再让 AI 帮忙。";
+    return;
+  }
+
+  aiPreview.textContent = "DeepSeek 正在帮你润色，请稍等……";
+  setStatus("正在请求 DeepSeek 润色……");
+
+  try {
+    const response = await fetch("/api/polish", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, mode }),
+    });
+    const data = await response.json();
+    if (!response.ok || !data.ok) {
+      throw new Error(data.error || "DeepSeek 润色失败。");
+    }
+    aiSuggestion = data.text;
+    aiPreview.textContent = aiSuggestion;
+    setStatus("DeepSeek 已经给出建议，喜欢的话可以点“接受建议”。");
+  } catch (error) {
+    aiSuggestion = makePolish(text, mode);
+    aiPreview.textContent = `${error.message}\n\n先给你一个本地备用建议：\n${aiSuggestion}`;
+    setStatus("DeepSeek 暂时没连上，已显示本地备用建议。");
+  }
+}
 function exportFile(filename, content, type) {
   const blob = new Blob([content], { type });
   const url = URL.createObjectURL(blob);
@@ -375,9 +405,7 @@ function bindEvents() {
     updateCounts();
   });
   document.querySelectorAll("[data-polish]").forEach((button) => button.addEventListener("click", () => {
-    const text = plainTextFromHtml(editor.innerHTML);
-    aiSuggestion = makePolish(text, button.dataset.polish);
-    aiPreview.textContent = aiSuggestion || "先写一点日记，再让 AI 帮忙。";
+    requestAiPolish(button.dataset.polish);
   }));
   $("#acceptAiBtn").addEventListener("click", () => {
     if (!aiSuggestion) return;
