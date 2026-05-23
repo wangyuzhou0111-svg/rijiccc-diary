@@ -1,0 +1,9 @@
+{
+  "name": "rijiccc-diary",
+  "version": "1.0.0",
+  "private": true,
+  "description": "日记记录表网站，带 DeepSeek AI 对话。",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

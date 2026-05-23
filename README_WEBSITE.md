@@ -4,11 +4,15 @@
 
 ## 网站域名
 
-准备使用的域名：
+现在已经部署成功的公网地址：
+
+`https://rijiccc-diary.vercel.app`
+
+准备使用的自定义域名：
 
 `https://rijiccc.kingstar.xin`
 
-现在检查到这个域名还没有解析成功。
+现在检查到这个域名还没有解析成功，而且 Vercel 当前账号还没有这个域名的权限。
 
 简单说：域名像门牌号，现在还没有告诉互联网“这个门牌号对应哪一台服务器”。
 
@@ -97,10 +101,14 @@ DEEPSEEK_BASE_URL=https://api.deepseek.com
 
 ## 部署到真正网站的下一步
 
-要让 `https://rijiccc.kingstar.xin` 真正打开这个网站，需要做两件事：
+网站已经部署到 Vercel：
 
-1. 把这个文件夹上传到静态网站托管平台，比如 GitHub Pages、Cloudflare Pages、Vercel 或 Netlify。
-2. 在域名 DNS 管理页面里添加解析记录，让 `rijiccc.kingstar.xin` 指向托管平台。
+`https://rijiccc-diary.vercel.app`
+
+要让 `https://rijiccc.kingstar.xin` 真正打开这个网站，还需要做两件事：
+
+1. 在 Vercel 的 Domains 页面里验证 `rijiccc.kingstar.xin` 的拥有权。
+2. 在域名 DNS 管理页面里添加 Vercel 要求的解析记录，让 `rijiccc.kingstar.xin` 指向 Vercel。
 
 ## 重要安全提醒
 
