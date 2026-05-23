@@ -87,7 +87,7 @@ DEEPSEEK_BASE_URL=https://api.deepseek.com
 - 列表和格式整理。
 - 上传图片。
 - 图片说明和删除图片。
-- DeepSeek AI 润色：用户自己打字或语音告诉 AI 要怎么改。
+- DeepSeek AI：用户自己打字或语音说的话会直接发给 DeepSeek。
 - 语音输入尝试。
 - 写作提示和日记模板。
 - 导出 Markdown。

@@ -52,19 +52,8 @@ function readRequestBody(request) {
 }
 
 function buildPolishPrompt(text, instruction) {
-  return [
-    "你是一个温柔的中文日记助手，正在帮助三年级小朋友整理日记。",
-    `小朋友对你的要求：${instruction}`,
-    "要求：",
-    "1. 保留小朋友原本想表达的意思。",
-    "2. 不要编造没有出现的事实。",
-    "3. 语言要自然、清楚、适合小学生。",
-    "4. 只输出修改后的日记正文，不要解释过程。",
-    "5. 优先听小朋友自己写下或说出的要求。",
-    "",
-    "需要润色的日记：",
-    text,
-  ].join("\n");
+  if (!text) return instruction;
+  return `${instruction}\n\n当前日记内容：\n${text}`;
 }
 
 async function callDeepSeek(text, instruction) {
@@ -88,10 +77,6 @@ async function callDeepSeek(text, instruction) {
       temperature: 0.6,
       messages: [
         {
-          role: "system",
-          content: "你负责帮助小学生润色中文日记。输出要短、清楚、保留原意。",
-        },
-        {
           role: "user",
           content: buildPolishPrompt(text, instruction),
         },
@@ -107,30 +92,26 @@ async function callDeepSeek(text, instruction) {
 
   const result = data?.choices?.[0]?.message?.content?.trim();
   if (!result) {
-    throw new Error("DeepSeek 没有返回润色文字。");
+    throw new Error("DeepSeek 没有返回内容。");
   }
   return result;
 }
 
-async function handlePolish(request, response) {
+async function handleDeepSeek(request, response) {
   try {
     const body = await readRequestBody(request);
     const payload = JSON.parse(body || "{}");
     const text = String(payload.text || "").trim();
     const instruction = String(payload.instruction || "").trim();
-    if (!text) {
-      sendJson(response, 400, { ok: false, error: "请先写一点日记，再让 AI 帮忙。" });
-      return;
-    }
     if (!instruction) {
-      sendJson(response, 400, { ok: false, error: "请先告诉 DeepSeek 你想怎么改。" });
+      sendJson(response, 400, { ok: false, error: "请先对 DeepSeek 说一句话。" });
       return;
     }
     const result = await callDeepSeek(text, instruction);
     sendJson(response, 200, { ok: true, text: result, provider: "deepseek" });
   } catch (error) {
     const status = error.code === "NO_DEEPSEEK_KEY" ? 501 : 500;
-    sendJson(response, status, { ok: false, error: error.message || "AI 润色失败了。" });
+    sendJson(response, status, { ok: false, error: error.message || "DeepSeek 请求失败了。" });
   }
 }
 
@@ -174,8 +155,8 @@ const server = http.createServer((request, response) => {
     });
     return;
   }
-  if (request.method === "POST" && request.url === "/api/polish") {
-    handlePolish(request, response);
+  if (request.method === "POST" && request.url === "/api/deepseek") {
+    handleDeepSeek(request, response);
     return;
   }
   if (request.method === "GET" || request.method === "HEAD") {

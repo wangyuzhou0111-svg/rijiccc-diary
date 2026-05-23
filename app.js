@@ -238,36 +238,31 @@ function tidyText() {
 async function requestAiPolish() {
   const text = plainTextFromHtml(editor.innerHTML).trim();
   const instruction = aiInstructionInput.value.trim();
-  if (!text) {
-    aiSuggestion = "";
-    aiPreview.textContent = "先写一点日记，再让 DeepSeek 帮忙。";
-    return;
-  }
   if (!instruction) {
     aiSuggestion = "";
-    aiPreview.textContent = "请先打字，或者用语音告诉 DeepSeek 你想怎么改。";
+    aiPreview.textContent = "请先打字，或者用语音对 DeepSeek 说一句话。";
     return;
   }
 
-  aiPreview.textContent = "DeepSeek 正在帮你润色，请稍等……";
-  setStatus("正在请求 DeepSeek 润色……");
+  aiPreview.textContent = "DeepSeek 正在回复……";
+  setStatus("正在请求 DeepSeek……");
 
   try {
-    const response = await fetch("/api/polish", {
+    const response = await fetch("/api/deepseek", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text, instruction }),
     });
     const data = await response.json();
     if (!response.ok || !data.ok) {
-      throw new Error(data.error || "DeepSeek 润色失败。");
+      throw new Error(data.error || "DeepSeek 请求失败。");
     }
     aiSuggestion = data.text;
     aiPreview.textContent = aiSuggestion;
-    setStatus("DeepSeek 已经给出建议，喜欢的话可以点“接受建议”。");
+    setStatus("DeepSeek 已经回复。");
   } catch (error) {
     aiSuggestion = "";
-    aiPreview.textContent = error.message || "DeepSeek 润色失败了。";
+    aiPreview.textContent = error.message || "DeepSeek 请求失败了。";
     setStatus("DeepSeek 没有成功返回，请检查服务或 Token。");
   }
 }
@@ -440,11 +435,11 @@ function bindEvents() {
     if (!aiSuggestion) return;
     editor.innerHTML = aiSuggestion.split("\n").map((line) => `<p>${escapeHtml(line)}</p>`).join("");
     aiSuggestion = "";
-    aiPreview.textContent = "已经接受建议。";
+    aiPreview.textContent = "已经放进日记。";
     scheduleSave();
     updateCounts();
   });
-  $("#clearAiBtn").addEventListener("click", () => { aiSuggestion = ""; aiPreview.textContent = "已经不要这次建议。"; });
+  $("#clearAiBtn").addEventListener("click", () => { aiSuggestion = ""; aiPreview.textContent = "已经清空 DeepSeek 回复。"; });
   $("#randomPromptBtn").addEventListener("click", renderPrompt);
   $("#templateList").addEventListener("click", (event) => {
     const button = event.target.closest("[data-template]");
