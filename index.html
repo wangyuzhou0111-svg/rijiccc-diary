@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>日记记录表</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="top-bar">
+      <div class="brand-block">
+        <span class="brand-dot"></span>
+        <div>
+          <h1>日记记录表</h1>
+          <p>把今天的想法、图片和小发现都放在这里。</p>
+        </div>
+      </div>
+      <div class="top-actions">
+        <div class="action-group main-actions">
+          <button id="addEntryBtn" class="primary-button" type="button">增加</button>
+          <button id="newEntryBtn" class="soft-button" type="button">新建</button>
+          <button id="saveEntryBtn" class="soft-button" type="button">保存</button>
+        </div>
+        <div class="action-group export-actions">
+          <button id="exportMarkdownBtn" class="soft-button" type="button">导出 Markdown</button>
+          <button id="exportJsonBtn" class="soft-button" type="button">导出 JSON</button>
+          <button id="exitBtn" class="soft-button danger-button" type="button">退出</button>
+        </div>
+      </div>
+    </header>
+    <main class="workspace">
+      <aside class="sidebar">
+        <div class="panel ai-panel">
+          <div class="panel-title-row">
+            <h2>AI 协助</h2>
+            <span class="badge">左侧工具</span>
+          </div>
+          <div class="ai-buttons">
+            <button data-polish="smooth" class="soft-button" type="button">更通顺</button>
+            <button data-polish="child" class="soft-button" type="button">保留童真</button>
+            <button data-polish="fix" class="soft-button" type="button">改错别字</button>
+            <button data-polish="fun" class="soft-button" type="button">更有趣</button>
+          </div>
+          <div id="aiPreview" class="ai-preview">AI 建议会显示在这里。真正接入 Xiaomi MiMo-V2.5 时，请把密钥放到安全配置里。</div>
+          <div class="mini-actions">
+            <button id="acceptAiBtn" class="tiny-button" type="button">接受建议</button>
+            <button id="clearAiBtn" class="tiny-button" type="button">不要建议</button>
+          </div>
+        </div>
+        <div class="panel list-panel">
+          <div class="panel-title-row">
+            <h2>保存目录</h2>
+            <span id="entryCountBadge" class="badge">0 篇</span>
+          </div>
+          <label class="field-label" for="searchInput">搜索</label>
+          <input id="searchInput" class="text-input directory-search" type="search" placeholder="标题、正文、标签">
+          <div class="mini-actions directory-actions">
+            <button id="todayBtn" class="tiny-button" type="button">今天</button>
+            <button id="clearSearchBtn" class="tiny-button" type="button">清空</button>
+          </div>
+          <div id="entryList" class="entry-list"></div>
+        </div>
+      </aside>
+      <section class="editor-area">
+        <div class="panel editor-panel">
+          <div class="editor-heading">
+            <div>
+              <h2>正在写</h2>
+              <p>写完可以点保存，也可以按 Command + S。</p>
+            </div>
+            <span class="badge">自动保存</span>
+          </div>
+          <div class="meta-grid">
+            <label class="field-group">
+              <span>标题</span>
+              <input id="titleInput" class="text-input" type="text" placeholder="给今天起个名字">
+            </label>
+            <label class="field-group">
+              <span>日期</span>
+              <input id="dateInput" class="text-input" type="date">
+            </label>
+            <label class="field-group">
+              <span>心情</span>
+              <select id="moodSelect" class="text-input"></select>
+            </label>
+            <label class="field-group">
+              <span>天气</span>
+              <select id="weatherSelect" class="text-input"></select>
+            </label>
+            <label class="field-group wide-field">
+              <span>标签</span>
+              <input id="tagsInput" class="text-input" type="text" placeholder="学习, 旅行, 开心">
+            </label>
+          </div>
+          <div class="toolbar" role="toolbar" aria-label="文字工具">
+            <button data-command="bold" class="tool-button" type="button">粗体</button>
+            <button data-command="italic" class="tool-button" type="button">斜体</button>
+            <button data-command="underline" class="tool-button" type="button">下划线</button>
+            <button id="listBtn" class="tool-button" type="button">列表</button>
+            <button id="quoteBtn" class="tool-button" type="button">引用</button>
+            <button id="tidyBtn" class="tool-button" type="button">整理</button>
+            <label class="tool-field">颜色 <input id="colorInput" type="color" value="#27324a"></label>
+            <label class="tool-field">字号 <input id="sizeInput" type="range" min="16" max="34" value="20"></label>
+            <button id="voiceBtn" class="tool-button voice-button" type="button">语音</button>
+            <label class="upload-button">传图<input id="imageInput" type="file" accept="image/*" multiple></label>
+          </div>
+          <div id="editor" class="diary-editor" contenteditable="true" spellcheck="true" aria-label="日记正文"></div>
+          <div class="editor-footer">
+            <span id="statusText">准备好了</span>
+            <span id="wordCount">0 字</span>
+          </div>
+        </div>
+        <div class="panel image-panel">
+          <div class="panel-title-row">
+            <h2>图片</h2>
+            <span id="imageCountBadge" class="badge">0 张</span>
+          </div>
+          <div id="imageGrid" class="image-grid"></div>
+        </div>
+      </section>
+      <aside class="helper-area">
+        <div class="panel prompt-panel">
+          <div class="panel-title-row">
+            <h2>写作小帮手</h2>
+            <button id="randomPromptBtn" class="tiny-button" type="button">换一个</button>
+          </div>
+          <div id="promptBox" class="prompt-box"></div>
+          <div class="template-list" id="templateList"></div>
+        </div>
+        <div class="panel stats-panel">
+          <h2>今天的小统计</h2>
+          <dl class="stats-grid">
+            <div><dt>字数</dt><dd id="statWords">0</dd></div>
+            <div><dt>图片</dt><dd id="statImages">0</dd></div>
+            <div><dt>标签</dt><dd id="statTags">0</dd></div>
+            <div><dt>版本</dt><dd id="statVersions">0</dd></div>
+          </dl>
+        </div>
+      </aside>
+    </main>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
