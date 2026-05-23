@@ -2,6 +2,7 @@
 const STORAGE_KEY = "diary-record-app.entries.v1";
 const ACTIVE_KEY = "diary-record-app.active-id.v1";
 const AI_HISTORY_KEY = "diary-record-app.ai-history.v1";
+const AI_THREAD_KEY = "diary-record-app.ai-thread-id.v1";
 const AUTOSAVE_DELAY = 500;
 const moods = ["开心", "普通", "难过", "兴奋", "生气", "好奇", "平静", "有点累", "很自豪", "想探索"];
 const weathers = [
@@ -43,6 +44,7 @@ let activeId = null;
 let saveTimer = null;
 let aiSuggestion = "";
 let aiHistory = [];
+let aiThreadId = null;
 let recognition = null;
 let aiRecognition = null;
 let listening = false;
@@ -112,18 +114,35 @@ function markDirty(message = "有新内容，还没有保存。") {
   setStatus(message);
 }
 function loadAiHistory() {
+  aiThreadId = localStorage.getItem(AI_THREAD_KEY) || makeId();
+  localStorage.setItem(AI_THREAD_KEY, aiThreadId);
   try {
     aiHistory = JSON.parse(localStorage.getItem(AI_HISTORY_KEY) || "[]");
   } catch (error) {
     aiHistory = [];
   }
+  let changed = false;
+  aiHistory.forEach((item) => {
+    if (!item.threadId) {
+      item.threadId = aiThreadId;
+      changed = true;
+    }
+  });
+  if (changed) saveAiHistory();
 }
 function saveAiHistory() {
   localStorage.setItem(AI_HISTORY_KEY, JSON.stringify(aiHistory));
 }
+function saveAiThreadId() {
+  localStorage.setItem(AI_THREAD_KEY, aiThreadId);
+}
+function getActiveAiHistory() {
+  return aiHistory.filter((item) => item.threadId === aiThreadId);
+}
 function addAiHistoryItem(instruction, diaryText, reply) {
   aiHistory.unshift({
     id: makeId(),
+    threadId: aiThreadId,
     instruction,
     diaryText,
     reply,
@@ -142,8 +161,18 @@ function renderAiHistory() {
   aiHistoryList.innerHTML = aiHistory.map((item) => {
     const instruction = item.instruction.slice(0, 42) || "没有内容";
     const reply = item.reply.slice(0, 44) || "没有回复";
-    return `<button class="ai-history-item" data-ai-history-id="${item.id}" type="button"><strong>${escapeHtml(instruction)}</strong><span>${escapeHtml(reply)}</span><span>${formatTimeLabel(item.createdAt)}</span></button>`;
+    const threadMark = item.threadId === aiThreadId ? "当前对话" : "旧对话";
+    return `<button class="ai-history-item" data-ai-history-id="${item.id}" type="button"><span class="ai-history-topline"><strong>${escapeHtml(instruction)}</strong><em class="ai-history-thread-mark">${threadMark}</em></span><span>${escapeHtml(reply)}</span><span>${formatTimeLabel(item.createdAt)}</span></button>`;
   }).join("");
+}
+function refreshAiConversation() {
+  aiThreadId = makeId();
+  saveAiThreadId();
+  aiSuggestion = "";
+  aiInstructionInput.value = "";
+  aiPreview.textContent = "已经开始新的 AI 对话。旧记录还在，点击旧记录可以接着那次聊。";
+  renderAiHistory();
+  setStatus("AI 对话已经刷新，下一句会从新的对话开始。");
 }
 function loadEntries() {
   try {
@@ -341,7 +370,7 @@ async function requestAiPolish() {
       body: JSON.stringify({
         text,
         instruction,
-        history: aiHistory.slice(0, 20),
+        history: getActiveAiHistory().slice(0, 20),
       }),
     });
     const data = await response.json();
@@ -528,6 +557,7 @@ function bindEvents() {
   });
   $("#sendAiBtn").addEventListener("click", requestAiPolish);
   $("#aiVoiceBtn").addEventListener("click", toggleAiVoice);
+  $("#refreshAiThreadBtn").addEventListener("click", refreshAiConversation);
   $("#clearAiHistoryBtn").addEventListener("click", () => {
     aiHistory = [];
     saveAiHistory();
@@ -539,10 +569,13 @@ function bindEvents() {
     if (!button) return;
     const item = aiHistory.find((record) => record.id === button.dataset.aiHistoryId);
     if (!item) return;
+    aiThreadId = item.threadId || aiThreadId;
+    saveAiThreadId();
     aiInstructionInput.value = item.instruction;
     aiSuggestion = item.reply;
     aiPreview.textContent = item.reply;
-    setStatus("已经打开一条 AI 记录。");
+    renderAiHistory();
+    setStatus("已经打开这条 AI 对话，可以接着聊。");
   });
   $("#acceptAiBtn").addEventListener("click", () => {
     if (!aiSuggestion) return;
