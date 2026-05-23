@@ -4,6 +4,12 @@ const ACTIVE_KEY = "diary-record-app.active-id.v1";
 const AI_HISTORY_KEY = "diary-record-app.ai-history.v1";
 const AI_THREAD_KEY = "diary-record-app.ai-thread-id.v1";
 const AUTOSAVE_DELAY = 500;
+const documentTypes = [
+  { value: "diary", label: "日记", title: "新的日记" },
+  { value: "note", label: "写作笔记", title: "新的写作笔记" },
+  { value: "blog", label: "博客", title: "新的博客" },
+  { value: "letter", label: "写信", title: "新的信" },
+];
 const moods = ["开心", "普通", "难过", "兴奋", "生气", "好奇", "平静", "有点累", "很自豪", "想探索"];
 const weathers = [
   "晴天",
@@ -50,10 +56,12 @@ let aiRecognition = null;
 let listening = false;
 let aiListening = false;
 let hasUnsavedChanges = false;
+let libraryFilter = "all";
 const $ = (selector) => document.querySelector(selector);
 const entryList = $("#entryList");
 const editor = $("#editor");
 const titleInput = $("#titleInput");
+const docTypeSelect = $("#docTypeSelect");
 const dateInput = $("#dateInput");
 const moodSelect = $("#moodSelect");
 const weatherSelect = $("#weatherSelect");
@@ -68,6 +76,13 @@ const aiHistoryList = $("#aiHistoryList");
 const sendAiBtn = $("#sendAiBtn");
 const writeAiBtn = $("#writeAiBtn");
 const aiVoiceBtn = $("#aiVoiceBtn");
+const blogFields = $("#blogFields");
+const blogSlugInput = $("#blogSlugInput");
+const blogStatusSelect = $("#blogStatusSelect");
+const blogSummaryInput = $("#blogSummaryInput");
+const letterFields = $("#letterFields");
+const letterPhoneInput = $("#letterPhoneInput");
+const letterGreetingInput = $("#letterGreetingInput");
 const promptBox = $("#promptBox");
 function todayString() {
   const now = new Date();
@@ -99,6 +114,21 @@ function formatDateLabel(dateText) {
   const parts = dateText.split("-");
   if (parts.length !== 3) return dateText;
   return `${parts[0]}年${Number(parts[1])}月${Number(parts[2])}日`;
+}
+function getDocumentType(value) {
+  return documentTypes.find((type) => type.value === value) || documentTypes[0];
+}
+function getNewEntryKind() {
+  return libraryFilter === "all" ? "diary" : libraryFilter;
+}
+function makeSlug(text) {
+  return String(text || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_]+/g, "-")
+    .replace(/[^a-z0-9\u4e00-\u9fa5-]/g, "")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "") || `post-${todayString()}`;
 }
 function setStatus(message) {
   statusText.textContent = message;
@@ -216,11 +246,13 @@ function scheduleSave() {
     updateCounts();
   }, AUTOSAVE_DELAY);
 }
-function createEntry(shouldRender = true) {
+function createEntry(shouldRender = true, kind = getNewEntryKind()) {
   const now = new Date().toISOString();
+  const type = getDocumentType(kind);
   const entry = {
     id: makeId(),
-    title: "新的日记",
+    kind: type.value,
+    title: type.title,
     date: todayString(),
     mood: moods[0],
     weather: weathers[0],
@@ -230,6 +262,8 @@ function createEntry(shouldRender = true) {
     fontSize: 20,
     images: [],
     versions: [],
+    blog: { slug: "", summary: "", status: "draft" },
+    letter: { phone: "", greeting: "" },
     createdAt: now,
     updatedAt: now
   };
@@ -246,6 +280,7 @@ function collectActiveEntry() {
   const entry = getActiveEntry();
   if (!entry) return;
   const previousBody = entry.body || "";
+  entry.kind = docTypeSelect.value || "diary";
   entry.title = titleInput.value.trim() || "没有标题的日记";
   entry.date = dateInput.value || todayString();
   entry.mood = moodSelect.value;
@@ -254,6 +289,15 @@ function collectActiveEntry() {
   entry.body = editor.innerHTML;
   entry.color = $("#colorInput").value;
   entry.fontSize = Number($("#sizeInput").value);
+  entry.blog = {
+    slug: blogSlugInput.value.trim(),
+    summary: blogSummaryInput.value.trim(),
+    status: blogStatusSelect.value || "draft",
+  };
+  entry.letter = {
+    phone: letterPhoneInput.value.trim(),
+    greeting: letterGreetingInput.value.trim(),
+  };
   entry.updatedAt = new Date().toISOString();
   if (previousBody && previousBody !== entry.body) {
     entry.versions = entry.versions || [];
@@ -267,6 +311,10 @@ function fillSelect(select, values) {
 function renderEditor() {
   const entry = getActiveEntry();
   if (!entry) return;
+  entry.kind = entry.kind || "diary";
+  entry.blog = entry.blog || { slug: "", summary: "", status: "draft" };
+  entry.letter = entry.letter || { phone: "", greeting: "" };
+  docTypeSelect.value = entry.kind;
   titleInput.value = entry.title || "";
   dateInput.value = entry.date || todayString();
   moodSelect.value = entry.mood || moods[0];
@@ -277,20 +325,34 @@ function renderEditor() {
   editor.style.fontSize = `${entry.fontSize || 20}px`;
   $("#colorInput").value = entry.color || "#27324a";
   $("#sizeInput").value = entry.fontSize || 20;
+  blogSlugInput.value = entry.blog.slug || "";
+  blogSummaryInput.value = entry.blog.summary || "";
+  blogStatusSelect.value = entry.blog.status || "draft";
+  letterPhoneInput.value = entry.letter.phone || "";
+  letterGreetingInput.value = entry.letter.greeting || "";
+  renderContextFields();
   updateCounts();
   renderImages();
+}
+function renderContextFields() {
+  const kind = docTypeSelect.value || "diary";
+  blogFields.hidden = kind !== "blog";
+  letterFields.hidden = kind !== "letter";
 }
 function renderEntryList() {
   const query = searchInput.value.trim().toLowerCase();
   const visible = entries.filter((entry) => {
-    const text = `${entry.title} ${plainTextFromHtml(entry.body)} ${(entry.tags || []).join(" ")}`.toLowerCase();
-    return !query || text.includes(query);
+    entry.kind = entry.kind || "diary";
+    const typeMatch = libraryFilter === "all" || entry.kind === libraryFilter;
+    const text = `${entry.title} ${plainTextFromHtml(entry.body)} ${(entry.tags || []).join(" ")} ${getDocumentType(entry.kind).label}`.toLowerCase();
+    return typeMatch && (!query || text.includes(query));
   });
   $("#entryCountBadge").textContent = `${visible.length} 篇`;
   entryList.innerHTML = visible.map((entry) => {
     const activeClass = entry.id === activeId ? " active" : "";
     const text = plainTextFromHtml(entry.body).slice(0, 46) || "还没有正文";
-    return `<article class="entry-card${activeClass}" data-id="${entry.id}"><button class="entry-open-button" data-open-entry="${entry.id}" type="button"><span class="directory-line"><strong>${escapeHtml(entry.title || "没有标题")}</strong><em class="saved-mark">已保存</em></span><span>${formatDateLabel(entry.date)} · ${escapeHtml(entry.mood || "心情")}</span><span>${escapeHtml(text)}</span></button><button class="entry-delete-button" data-delete-entry="${entry.id}" type="button" aria-label="删除这篇日记">删除</button></article>`;
+    const type = getDocumentType(entry.kind || "diary");
+    return `<article class="entry-card${activeClass}" data-id="${entry.id}"><button class="entry-open-button" data-open-entry="${entry.id}" type="button"><span class="directory-line"><strong>${escapeHtml(entry.title || "没有标题")}</strong><em class="saved-mark">${escapeHtml(type.label)}</em></span><span>${formatDateLabel(entry.date)} · ${escapeHtml(entry.mood || "心情")}</span><span>${escapeHtml(text)}</span></button><button class="entry-delete-button" data-delete-entry="${entry.id}" type="button" aria-label="删除这篇作品">删除</button></article>`;
   }).join("");
 }
 function deleteEntry(entryId) {
@@ -415,6 +477,22 @@ function runDiaryAiTools(tools) {
       const tags = Array.isArray(value) ? value : normalizeTags(String(value || ""));
       tagsInput.value = tags.map((tag) => String(tag).trim()).filter(Boolean).join(", ");
       used.push("设置标签");
+    } else if (name === "set_type" && documentTypes.some((type) => type.value === String(value))) {
+      docTypeSelect.value = String(value);
+      renderContextFields();
+      used.push("设置类型");
+    } else if (name === "set_blog_summary") {
+      blogSummaryInput.value = String(value || "").trim();
+      used.push("设置博客摘要");
+    } else if (name === "set_blog_slug") {
+      blogSlugInput.value = makeSlug(value);
+      used.push("设置博客地址名");
+    } else if (name === "set_letter_phone") {
+      letterPhoneInput.value = String(value || "").trim();
+      used.push("设置手机号");
+    } else if (name === "set_letter_greeting") {
+      letterGreetingInput.value = String(value || "").trim();
+      used.push("设置信件称呼");
     }
   });
   collectActiveEntry();
@@ -519,6 +597,7 @@ function exportMarkdown() {
   const lines = [];
   lines.push(`# ${entry.title}`);
   lines.push("");
+  lines.push(`类型：${getDocumentType(entry.kind || "diary").label}`);
   lines.push(`日期：${entry.date}`);
   lines.push(`心情：${entry.mood}`);
   lines.push(`天气：${entry.weather}`);
@@ -529,10 +608,72 @@ function exportMarkdown() {
   (entry.images || []).forEach((image, index) => lines.push(`图片 ${index + 1}：${image.note || "没有说明"}`));
   exportFile(`${entry.date}-${entry.title}.md`, lines.join("\n"), "text/markdown;charset=utf-8");
 }
+function exportHtml() {
+  collectActiveEntry();
+  const entry = getActiveEntry();
+  const summary = entry.blog?.summary || plainTextFromHtml(entry.body).slice(0, 120);
+  const html = `<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${escapeHtml(entry.title)}</title>
+  <meta name="description" content="${escapeHtml(summary)}">
+</head>
+<body>
+  <article>
+    <h1>${escapeHtml(entry.title)}</h1>
+    <p>${escapeHtml(formatDateLabel(entry.date))} · ${escapeHtml(getDocumentType(entry.kind || "diary").label)}</p>
+    ${entry.body || ""}
+  </article>
+</body>
+</html>`;
+  const filename = `${entry.blog?.slug || makeSlug(entry.title)}.html`;
+  exportFile(filename, html, "text/html;charset=utf-8");
+}
 function exportJson() {
   collectActiveEntry();
   const entry = getActiveEntry();
   exportFile(`${entry.date}-${entry.title}.json`, JSON.stringify(entry, null, 2), "application/json;charset=utf-8");
+}
+async function copyPlainText() {
+  collectActiveEntry();
+  const entry = getActiveEntry();
+  const text = plainTextFromHtml(entry.body);
+  try {
+    await navigator.clipboard.writeText(text);
+    setStatus("正文文字已经复制。");
+  } catch (error) {
+    setStatus("这个浏览器没有允许复制，可以手动选中文字复制。");
+  }
+}
+function buildLetterText(entry) {
+  const greeting = entry.letter?.greeting?.trim();
+  const body = plainTextFromHtml(entry.body).trim();
+  return [greeting, body].filter(Boolean).join("\n\n");
+}
+function sendLetterBySms() {
+  collectActiveEntry();
+  const entry = getActiveEntry();
+  const phone = (entry.letter?.phone || "").replace(/[^\d+]/g, "");
+  const message = buildLetterText(entry);
+  if (entry.kind !== "letter") {
+    setStatus("请先把类型改成“写信”。");
+    return;
+  }
+  if (!phone) {
+    setStatus("请先填写收信人的手机号。");
+    return;
+  }
+  if (!message) {
+    setStatus("信的正文还是空的，请先写一点内容。");
+    return;
+  }
+  const ok = window.confirm(`要打开“信息”给 ${phone} 发送这封信吗？打开后还需要你自己点发送。`);
+  if (!ok) return;
+  const separator = /iPhone|iPad|iPod|Macintosh/i.test(navigator.userAgent) ? "&" : "?";
+  window.location.href = `sms:${encodeURIComponent(phone)}${separator}body=${encodeURIComponent(message)}`;
+  setStatus("已经打开短信发送界面，请你检查后再点发送。");
 }
 function setupVoice() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -630,10 +771,22 @@ function bindEvents() {
   $("#exitBtn").addEventListener("click", exitApp);
   $("#exportMarkdownBtn").addEventListener("click", exportMarkdown);
   $("#exportJsonBtn").addEventListener("click", exportJson);
+  $("#exportHtmlBtn").addEventListener("click", exportHtml);
+  $("#copyPlainBtn").addEventListener("click", copyPlainText);
+  $("#sendSmsBtn").addEventListener("click", sendLetterBySms);
   $("#todayBtn").addEventListener("click", () => { dateInput.value = todayString(); scheduleSave(); });
   $("#clearSearchBtn").addEventListener("click", () => { searchInput.value = ""; renderEntryList(); });
   searchInput.addEventListener("input", renderEntryList);
-  [titleInput, dateInput, moodSelect, weatherSelect, tagsInput].forEach((node) => node.addEventListener("input", scheduleSave));
+  document.querySelectorAll("[data-library-filter]").forEach((button) => button.addEventListener("click", () => {
+    libraryFilter = button.dataset.libraryFilter;
+    document.querySelectorAll("[data-library-filter]").forEach((item) => item.classList.toggle("active", item === button));
+    renderEntryList();
+  }));
+  docTypeSelect.addEventListener("change", () => {
+    renderContextFields();
+    scheduleSave();
+  });
+  [titleInput, docTypeSelect, dateInput, moodSelect, weatherSelect, tagsInput, blogSlugInput, blogStatusSelect, blogSummaryInput, letterPhoneInput, letterGreetingInput].forEach((node) => node.addEventListener("input", scheduleSave));
   editor.addEventListener("input", () => { updateCounts(); scheduleSave(); });
   $("#colorInput").addEventListener("input", (event) => { editor.style.color = event.target.value; scheduleSave(); });
   $("#sizeInput").addEventListener("input", (event) => { editor.style.fontSize = `${event.target.value}px`; scheduleSave(); });
@@ -722,6 +875,8 @@ function bindEvents() {
   });
 }
 function boot() {
+  fillSelect(docTypeSelect, documentTypes.map((type) => type.label));
+  docTypeSelect.innerHTML = documentTypes.map((type) => `<option value="${type.value}">${escapeHtml(type.label)}</option>`).join("");
   fillSelect(moodSelect, moods);
   fillSelect(weatherSelect, weathers);
   loadEntries();

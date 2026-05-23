@@ -72,6 +72,9 @@ p { margin: 4px 0 0; color: var(--muted); }
 .badge { display: inline-flex; align-items: center; min-height: 24px; padding: 0 8px; border-radius: 999px; background: var(--accent-soft); color: #8c4429; font-size: 12px; white-space: nowrap; }
 .directory-search { margin-bottom: 8px; }
 .directory-actions { margin-bottom: 12px; }
+.library-tabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin-bottom: 10px; }
+.library-tab { border: 1px solid var(--line); border-radius: 8px; background: rgba(255, 255, 255, 0.78); color: var(--muted); min-height: 32px; padding: 0 6px; font-size: 12px; font-weight: 700; }
+.library-tab.active { border-color: var(--accent); background: var(--accent-soft); color: #8c4429; }
 .entry-list { display: grid; gap: 8px; max-height: calc(100vh - 440px); min-height: 128px; overflow: auto; padding-right: 2px; }
 .entry-card { border: 1px solid var(--line); border-radius: 8px; background: #fff; padding: 10px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: start; text-align: left; }
 .entry-card.active { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); background: #fff8f0; }
@@ -105,6 +108,9 @@ p { margin: 4px 0 0; color: var(--muted); }
 .ai-history-thread-mark { flex: 0 0 auto; border-radius: 999px; background: var(--accent-soft); color: #8c4429; padding: 2px 7px; font-size: 11px; font-style: normal; font-weight: 700; }
 .meta-grid { display: grid; grid-template-columns: repeat(4, minmax(120px, 1fr)); gap: 12px; margin-bottom: 12px; }
 .wide-field { grid-column: span 4; }
+.context-fields { display: grid; grid-template-columns: repeat(2, minmax(160px, 1fr)); gap: 12px; margin: -2px 0 12px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: #fff7ec; }
+.context-fields[hidden] { display: none; }
+.letter-send-button { align-self: end; }
 .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px; background: #fff4e8; border: 1px solid var(--line); border-radius: 8px; margin-bottom: 12px; }
 .tool-field { min-height: 38px; display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 8px; padding: 0 10px; background: #fff; color: var(--muted); }
 .tool-field input[type='range'] { width: 120px; }
@@ -145,6 +151,8 @@ p { margin: 4px 0 0; color: var(--muted); }
   .mini-actions > button, .ai-buttons > button { width: 100%; }
   .meta-grid { grid-template-columns: 1fr; }
   .wide-field { grid-column: auto; }
+  .context-fields { grid-template-columns: 1fr; }
+  .library-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .diary-editor { min-height: 360px; max-height: none; }
 }
 @media (max-width: 940px) and (orientation: landscape) {
@@ -166,6 +174,9 @@ p { margin: 4px 0 0; color: var(--muted); }
   .editor-heading { padding-bottom: 8px; margin-bottom: 8px; }
   .meta-grid { grid-template-columns: repeat(2, minmax(120px, 1fr)); gap: 8px; margin-bottom: 8px; }
   .wide-field { grid-column: span 2; }
+  .context-fields { grid-template-columns: repeat(2, minmax(120px, 1fr)); gap: 8px; margin-bottom: 8px; padding: 8px; }
+  .library-tabs { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
+  .library-tab { min-height: 28px; font-size: 11px; }
   .toolbar { gap: 6px; padding: 8px; margin-bottom: 8px; }
   .diary-editor { min-height: calc(100vh - 280px); max-height: calc(100vh - 210px); padding: 14px; font-size: 18px; }
   .entry-list { max-height: 30vh; }
