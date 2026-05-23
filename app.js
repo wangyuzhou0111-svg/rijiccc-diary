@@ -65,6 +65,9 @@ const imageGrid = $("#imageGrid");
 const aiPreview = $("#aiPreview");
 const aiInstructionInput = $("#aiInstructionInput");
 const aiHistoryList = $("#aiHistoryList");
+const sendAiBtn = $("#sendAiBtn");
+const writeAiBtn = $("#writeAiBtn");
+const aiVoiceBtn = $("#aiVoiceBtn");
 const promptBox = $("#promptBox");
 function todayString() {
   const now = new Date();
@@ -354,10 +357,22 @@ function tidyText() {
 function textToParagraphs(text) {
   return String(text || "").split(/\n{2,}/).map((part) => part.trim()).filter(Boolean).map((part) => `<p>${escapeHtml(part).replace(/\n/g, "<br>")}</p>`).join("");
 }
+function setAiBusy(isBusy, message) {
+  [sendAiBtn, writeAiBtn, aiVoiceBtn].forEach((button) => {
+    if (!button) return;
+    button.disabled = isBusy;
+    button.classList.toggle("is-loading", isBusy);
+  });
+  aiInstructionInput.disabled = isBusy;
+  if (message) aiPreview.textContent = message;
+}
 function parseAiToolPayload(rawText) {
   const cleaned = String(rawText || "").trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "");
+  const jsonStart = cleaned.indexOf("{");
+  const jsonEnd = cleaned.lastIndexOf("}");
+  const jsonText = jsonStart >= 0 && jsonEnd > jsonStart ? cleaned.slice(jsonStart, jsonEnd + 1) : cleaned;
   try {
-    const payload = JSON.parse(cleaned);
+    const payload = JSON.parse(jsonText);
     return {
       reply: String(payload.reply || "已经写进日记。"),
       tools: Array.isArray(payload.tools) ? payload.tools : [],
@@ -375,10 +390,14 @@ function runDiaryAiTools(tools) {
     const name = String(tool?.name || "").trim();
     const value = tool?.value;
     if (name === "append_diary") {
-      insertTextAtEnd(String(value || ""));
+      const text = String(value || "").trim();
+      if (!text) return;
+      insertTextAtEnd(text);
       used.push("追加正文");
     } else if (name === "replace_diary") {
-      editor.innerHTML = textToParagraphs(value);
+      const text = String(value || "").trim();
+      if (!text) return;
+      editor.innerHTML = textToParagraphs(text);
       used.push("替换正文");
     } else if (name === "tidy_diary") {
       tidyText();
@@ -401,6 +420,7 @@ function runDiaryAiTools(tools) {
   collectActiveEntry();
   saveEntries();
   renderEntryList();
+  renderEditor();
   updateCounts();
   return used;
 }
@@ -413,7 +433,7 @@ async function requestAiPolish() {
     return;
   }
 
-  aiPreview.textContent = "DeepSeek 正在回复……";
+  setAiBusy(true, "DeepSeek 正在回复……");
   setStatus("正在请求 DeepSeek……");
 
   try {
@@ -438,6 +458,8 @@ async function requestAiPolish() {
     aiSuggestion = "";
     aiPreview.textContent = error.message || "DeepSeek 请求失败了。";
     setStatus("DeepSeek 没有成功返回，请检查服务或 Token。");
+  } finally {
+    setAiBusy(false);
   }
 }
 async function requestAiWriteToDiary() {
@@ -449,7 +471,7 @@ async function requestAiWriteToDiary() {
     return;
   }
 
-  aiPreview.textContent = "DeepSeek 正在调用工具写日记……";
+  setAiBusy(true, "DeepSeek 正在调用工具写日记……");
   setStatus("正在让 DeepSeek 写进日记……");
 
   try {
@@ -470,13 +492,15 @@ async function requestAiWriteToDiary() {
     const payload = parseAiToolPayload(data.text);
     const usedTools = runDiaryAiTools(payload.tools);
     aiSuggestion = payload.reply;
-    aiPreview.textContent = usedTools.length ? `${payload.reply}\n\n已使用：${usedTools.join("、")}` : payload.reply;
+    aiPreview.textContent = usedTools.length ? `${payload.reply}\n\n已使用：${usedTools.join("、")}` : `${payload.reply}\n\n这次 DeepSeek 没有选择可执行工具，所以日记没有改动。`;
     addAiHistoryItem(instruction, text, data.text);
     setStatus("DeepSeek 已经写进右边的日记框。");
   } catch (error) {
     aiSuggestion = "";
     aiPreview.textContent = error.message || "DeepSeek 没有写成功。";
     setStatus("DeepSeek 没有成功写入，请检查服务或 Token。");
+  } finally {
+    setAiBusy(false);
   }
 }
 function exportFile(filename, content, type) {

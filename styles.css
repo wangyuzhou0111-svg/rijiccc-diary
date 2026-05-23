@@ -39,6 +39,7 @@ body::before {
 }
 button, input, select, textarea { font: inherit; }
 button { cursor: pointer; }
+button:disabled, textarea:disabled { cursor: not-allowed; opacity: 0.62; }
 .app-shell { width: min(1680px, 100%); margin: 0 auto; padding: 22px; }
 .top-bar { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 18px; position: relative; z-index: 1; padding: 14px 16px; border: 1px solid rgba(234, 211, 189, 0.7); border-radius: 12px; background: rgba(255, 250, 243, 0.78); box-shadow: 0 16px 36px rgba(101, 63, 37, 0.1); backdrop-filter: blur(12px); }
 .brand-block { display: flex; align-items: center; gap: 14px; min-width: 260px; }
@@ -62,6 +63,8 @@ p { margin: 4px 0 0; color: var(--muted); }
 .primary-button { background: linear-gradient(135deg, var(--accent), var(--warm)); color: #fff; border-color: transparent; font-weight: 700; box-shadow: 0 10px 22px rgba(180, 91, 56, 0.22); }
 .danger-button { color: var(--danger); border-color: #efc5ca; }
 .soft-button:hover, .tiny-button:hover, .tool-button:hover, .upload-button:hover { border-color: var(--accent); color: var(--accent); }
+.primary-button.is-loading, .soft-button.is-loading { position: relative; overflow: hidden; }
+.primary-button.is-loading::after, .soft-button.is-loading::after { content: ""; width: 14px; height: 14px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 999px; animation: spin 0.8s linear infinite; }
 .tiny-button { min-height: 30px; padding: 0 10px; font-size: 13px; }
 .voice-button.is-listening { background: #ffe8ec; border-color: var(--danger); color: var(--danger); }
 .upload-button input { display: none; }
@@ -134,10 +137,44 @@ p { margin: 4px 0 0; color: var(--muted); }
   .action-group, .top-actions { width: 100%; justify-content: stretch; }
   .action-group > button { flex: 1; }
   .workspace { grid-template-columns: 1fr; }
+  .editor-area { order: 1; }
+  .sidebar { order: 2; }
+  .helper-area { order: 3; }
   .helper-area { grid-template-columns: 1fr; }
+  .ai-buttons, .mini-actions { display: grid; grid-template-columns: 1fr; align-items: stretch; }
+  .mini-actions > button, .ai-buttons > button { width: 100%; }
   .meta-grid { grid-template-columns: 1fr; }
   .wide-field { grid-column: auto; }
   .diary-editor { min-height: 360px; max-height: none; }
+}
+@media (max-width: 940px) and (orientation: landscape) {
+  .app-shell { padding: 8px; }
+  .top-bar { display: grid; grid-template-columns: minmax(190px, 0.8fr) minmax(0, 1.2fr); gap: 10px; margin-bottom: 8px; padding: 8px 10px; }
+  .brand-block { min-width: 0; gap: 10px; }
+  .brand-dot { width: 12px; height: 38px; }
+  h1 { font-size: 22px; }
+  .brand-block p { display: none; }
+  .top-actions { justify-content: end; gap: 6px; }
+  .action-group { gap: 6px; padding: 4px; }
+  .primary-button, .soft-button, .tool-button, .upload-button { min-height: 34px; padding: 0 9px; }
+  .tiny-button { min-height: 28px; }
+  .workspace { grid-template-columns: minmax(240px, 30vw) minmax(360px, 1fr); gap: 10px; align-items: start; }
+  .editor-area { order: 1; grid-column: 2; grid-row: 1 / span 2; }
+  .sidebar { order: 2; grid-column: 1; grid-row: 1; gap: 10px; max-height: calc(100vh - 78px); overflow: auto; }
+  .helper-area { order: 3; grid-column: 1; grid-row: 2; grid-template-columns: 1fr; gap: 10px; max-height: 42vh; overflow: auto; }
+  .compact-panel, .list-panel, .ai-panel, .prompt-panel, .stats-panel, .image-panel, .editor-panel { padding: 10px; }
+  .editor-heading { padding-bottom: 8px; margin-bottom: 8px; }
+  .meta-grid { grid-template-columns: repeat(2, minmax(120px, 1fr)); gap: 8px; margin-bottom: 8px; }
+  .wide-field { grid-column: span 2; }
+  .toolbar { gap: 6px; padding: 8px; margin-bottom: 8px; }
+  .diary-editor { min-height: calc(100vh - 280px); max-height: calc(100vh - 210px); padding: 14px; font-size: 18px; }
+  .entry-list { max-height: 30vh; }
+  .ai-instruction-input { min-height: 66px; }
+  .ai-preview, .prompt-box { min-height: 70px; margin: 8px 0; }
+  .ai-history-list { max-height: 120px; }
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 .swatch-001 { --swatch-color: hsl(37 54% 44%); }
 .swatch-002 { --swatch-color: hsl(74 54% 44%); }
