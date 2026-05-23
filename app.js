@@ -17,7 +17,9 @@ let activeId = null;
 let saveTimer = null;
 let aiSuggestion = "";
 let recognition = null;
+let aiRecognition = null;
 let listening = false;
+let aiListening = false;
 let hasUnsavedChanges = false;
 const $ = (selector) => document.querySelector(selector);
 const entryList = $("#entryList");
@@ -32,6 +34,7 @@ const statusText = $("#statusText");
 const wordCount = $("#wordCount");
 const imageGrid = $("#imageGrid");
 const aiPreview = $("#aiPreview");
+const aiInstructionInput = $("#aiInstructionInput");
 const promptBox = $("#promptBox");
 function todayString() {
   const now = new Date();
@@ -232,21 +235,17 @@ function tidyText() {
   editor.innerHTML = text.split("\n\n").map((part) => `<p>${escapeHtml(part)}</p>`).join("");
   scheduleSave();
 }
-function makePolish(text, mode) {
-  let result = text.replace(/\s+/g, " ").trim();
-  result = result.replace(/今天/g, "今天");
-  if (result && !/[。！？!?]$/.test(result)) result += "。";
-  if (mode === "smooth") result = `我把句子整理得更通顺：${result}`;
-  if (mode === "child") result = `保留你的原本语气，只轻轻整理：${result}`;
-  if (mode === "fix") result = result.replace(/的地得/g, "的、地、得");
-  if (mode === "fun") result = `${result}\n\n我还想补一句：这件事让我觉得很有意思，也让我更想继续观察。`;
-  return result;
-}
-async function requestAiPolish(mode) {
+async function requestAiPolish() {
   const text = plainTextFromHtml(editor.innerHTML).trim();
+  const instruction = aiInstructionInput.value.trim();
   if (!text) {
     aiSuggestion = "";
-    aiPreview.textContent = "先写一点日记，再让 AI 帮忙。";
+    aiPreview.textContent = "先写一点日记，再让 DeepSeek 帮忙。";
+    return;
+  }
+  if (!instruction) {
+    aiSuggestion = "";
+    aiPreview.textContent = "请先打字，或者用语音告诉 DeepSeek 你想怎么改。";
     return;
   }
 
@@ -257,7 +256,7 @@ async function requestAiPolish(mode) {
     const response = await fetch("/api/polish", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text, mode }),
+      body: JSON.stringify({ text, instruction }),
     });
     const data = await response.json();
     if (!response.ok || !data.ok) {
@@ -267,9 +266,9 @@ async function requestAiPolish(mode) {
     aiPreview.textContent = aiSuggestion;
     setStatus("DeepSeek 已经给出建议，喜欢的话可以点“接受建议”。");
   } catch (error) {
-    aiSuggestion = makePolish(text, mode);
-    aiPreview.textContent = `${error.message}\n\n先给你一个本地备用建议：\n${aiSuggestion}`;
-    setStatus("DeepSeek 暂时没连上，已显示本地备用建议。");
+    aiSuggestion = "";
+    aiPreview.textContent = error.message || "DeepSeek 润色失败了。";
+    setStatus("DeepSeek 没有成功返回，请检查服务或 Token。");
   }
 }
 function exportFile(filename, content, type) {
@@ -320,6 +319,22 @@ function setupVoice() {
     $("#voiceBtn").classList.remove("is-listening");
   };
   recognition.onerror = () => setStatus("这次没有听清楚，可以再试一次。");
+
+  aiRecognition = new SpeechRecognition();
+  aiRecognition.lang = "zh-CN";
+  aiRecognition.continuous = false;
+  aiRecognition.interimResults = false;
+  aiRecognition.onresult = (event) => {
+    const text = Array.from(event.results).map((result) => result[0].transcript).join(" ");
+    aiInstructionInput.value = `${aiInstructionInput.value} ${text}`.trim();
+    setStatus("已经把语音要求写进 AI 输入框。");
+  };
+  aiRecognition.onend = () => {
+    aiListening = false;
+    $("#aiVoiceBtn").classList.remove("is-listening");
+    aiInstructionInput.classList.remove("is-listening");
+  };
+  aiRecognition.onerror = () => setStatus("这次没有听清楚 AI 要求，可以再试一次。");
 }
 function toggleVoice() {
   if (!recognition) {
@@ -334,6 +349,21 @@ function toggleVoice() {
   $("#voiceBtn").classList.add("is-listening");
   setStatus("正在听你说话……");
   recognition.start();
+}
+function toggleAiVoice() {
+  if (!aiRecognition) {
+    setStatus("这个浏览器暂时不支持语音告诉 AI，可以先打字。");
+    return;
+  }
+  if (aiListening) {
+    aiRecognition.stop();
+    return;
+  }
+  aiListening = true;
+  $("#aiVoiceBtn").classList.add("is-listening");
+  aiInstructionInput.classList.add("is-listening");
+  setStatus("正在听你对 AI 说要求……");
+  aiRecognition.start();
 }
 function handleImages(files) {
   const entry = getActiveEntry();
@@ -404,9 +434,8 @@ function bindEvents() {
     renderImages();
     updateCounts();
   });
-  document.querySelectorAll("[data-polish]").forEach((button) => button.addEventListener("click", () => {
-    requestAiPolish(button.dataset.polish);
-  }));
+  $("#sendAiBtn").addEventListener("click", requestAiPolish);
+  $("#aiVoiceBtn").addEventListener("click", toggleAiVoice);
   $("#acceptAiBtn").addEventListener("click", () => {
     if (!aiSuggestion) return;
     editor.innerHTML = aiSuggestion.split("\n").map((line) => `<p>${escapeHtml(line)}</p>`).join("");

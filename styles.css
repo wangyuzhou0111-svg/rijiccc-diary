@@ -80,7 +80,10 @@ p { margin: 4px 0 0; color: var(--muted); }
 .ai-panel::before { content: ""; position: absolute; width: 120px; height: 120px; border: 1px solid rgba(180, 91, 56, 0.12); border-radius: 999px; right: -38px; top: -42px; }
 .ai-panel::after { content: ""; position: absolute; width: 64px; height: 64px; border-radius: 999px; background: rgba(244, 162, 97, 0.16); right: 28px; bottom: 16px; }
 .ai-panel > * { position: relative; z-index: 1; }
-.ai-buttons { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.ai-buttons { display: grid; grid-template-columns: 1fr; }
+.ai-instruction-input { width: 100%; min-height: 92px; resize: vertical; border: 1px solid var(--line); border-radius: 8px; padding: 10px 11px; background: rgba(255, 255, 255, 0.9); color: var(--ink); outline: none; line-height: 1.6; margin-bottom: 10px; }
+.ai-instruction-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.ai-instruction-input.is-listening { border-color: var(--danger); background: #fff2f4; }
 .meta-grid { display: grid; grid-template-columns: repeat(4, minmax(120px, 1fr)); gap: 12px; margin-bottom: 12px; }
 .wide-field { grid-column: span 4; }
 .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px; background: #fff4e8; border: 1px solid var(--line); border-radius: 8px; margin-bottom: 12px; }

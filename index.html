@@ -34,15 +34,15 @@
         <div class="panel ai-panel">
           <div class="panel-title-row">
             <h2>AI 协助</h2>
-            <span class="badge">左侧工具</span>
+            <span class="badge">DeepSeek</span>
           </div>
+          <label class="field-label" for="aiInstructionInput">告诉 DeepSeek 你想怎么改</label>
+          <textarea id="aiInstructionInput" class="ai-instruction-input" placeholder="例如：帮我改得更通顺，但保留我自己的语气。"></textarea>
           <div class="ai-buttons">
-            <button data-polish="smooth" class="soft-button" type="button">更通顺</button>
-            <button data-polish="child" class="soft-button" type="button">保留童真</button>
-            <button data-polish="fix" class="soft-button" type="button">改错别字</button>
-            <button data-polish="fun" class="soft-button" type="button">更有趣</button>
+            <button id="sendAiBtn" class="primary-button" type="button">发送给 DeepSeek</button>
+            <button id="aiVoiceBtn" class="soft-button" type="button">语音告诉 AI</button>
           </div>
-          <div id="aiPreview" class="ai-preview">AI 建议会显示在这里。现在使用 DeepSeek，本机后端会安全读取 Token。</div>
+          <div id="aiPreview" class="ai-preview">先写日记，再打字或语音告诉 DeepSeek 你想怎么改。</div>
           <div class="mini-actions">
             <button id="acceptAiBtn" class="tiny-button" type="button">接受建议</button>
             <button id="clearAiBtn" class="tiny-button" type="button">不要建议</button>

@@ -51,30 +51,23 @@ function readRequestBody(request) {
   });
 }
 
-function buildPolishPrompt(text, mode) {
-  const modeNames = {
-    smooth: "更通顺",
-    child: "保留童真",
-    fix: "改错别字",
-    fun: "更有趣",
-  };
-  const modeName = modeNames[mode] || "更通顺";
+function buildPolishPrompt(text, instruction) {
   return [
     "你是一个温柔的中文日记助手，正在帮助三年级小朋友整理日记。",
-    `任务模式：${modeName}`,
+    `小朋友对你的要求：${instruction}`,
     "要求：",
     "1. 保留小朋友原本想表达的意思。",
     "2. 不要编造没有出现的事实。",
     "3. 语言要自然、清楚、适合小学生。",
     "4. 只输出修改后的日记正文，不要解释过程。",
-    "5. 如果模式是“保留童真”，不要把文字改得太像大人写的。",
+    "5. 优先听小朋友自己写下或说出的要求。",
     "",
     "需要润色的日记：",
     text,
   ].join("\n");
 }
 
-async function callDeepSeek(text, mode) {
+async function callDeepSeek(text, instruction) {
   const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) {
     const error = new Error("还没有配置 DeepSeek Token。");
@@ -92,7 +85,7 @@ async function callDeepSeek(text, mode) {
     },
     body: JSON.stringify({
       model,
-      temperature: mode === "fix" ? 0.2 : 0.7,
+      temperature: 0.6,
       messages: [
         {
           role: "system",
@@ -100,7 +93,7 @@ async function callDeepSeek(text, mode) {
         },
         {
           role: "user",
-          content: buildPolishPrompt(text, mode),
+          content: buildPolishPrompt(text, instruction),
         },
       ],
     }),
@@ -124,12 +117,16 @@ async function handlePolish(request, response) {
     const body = await readRequestBody(request);
     const payload = JSON.parse(body || "{}");
     const text = String(payload.text || "").trim();
-    const mode = String(payload.mode || "smooth");
+    const instruction = String(payload.instruction || "").trim();
     if (!text) {
       sendJson(response, 400, { ok: false, error: "请先写一点日记，再让 AI 帮忙。" });
       return;
     }
-    const result = await callDeepSeek(text, mode);
+    if (!instruction) {
+      sendJson(response, 400, { ok: false, error: "请先告诉 DeepSeek 你想怎么改。" });
+      return;
+    }
+    const result = await callDeepSeek(text, instruction);
     sendJson(response, 200, { ok: true, text: result, provider: "deepseek" });
   } catch (error) {
     const status = error.code === "NO_DEEPSEEK_KEY" ? 501 : 500;
