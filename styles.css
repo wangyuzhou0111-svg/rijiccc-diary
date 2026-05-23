@@ -84,6 +84,16 @@ p { margin: 4px 0 0; color: var(--muted); }
 .ai-instruction-input { width: 100%; min-height: 92px; resize: vertical; border: 1px solid var(--line); border-radius: 8px; padding: 10px 11px; background: rgba(255, 255, 255, 0.9); color: var(--ink); outline: none; line-height: 1.6; margin-bottom: 10px; }
 .ai-instruction-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 .ai-instruction-input.is-listening { border-color: var(--danger); background: #fff2f4; }
+.ai-history-block { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.ai-history-title { margin-bottom: 8px; }
+.ai-history-title h2 { font-size: 16px; }
+.ai-history-note { margin: -2px 0 8px; font-size: 12px; line-height: 1.5; color: var(--muted); }
+.ai-history-list { display: grid; gap: 8px; max-height: 220px; overflow: auto; padding-right: 2px; }
+.ai-history-empty { color: var(--muted); font-size: 13px; line-height: 1.6; padding: 10px; border: 1px dashed var(--line); border-radius: 8px; background: rgba(255, 255, 255, 0.58); }
+.ai-history-item { display: grid; gap: 5px; width: 100%; text-align: left; border: 1px solid var(--line); border-radius: 8px; background: rgba(255, 255, 255, 0.82); padding: 9px; color: var(--ink); }
+.ai-history-item:hover { border-color: var(--accent); color: var(--accent); }
+.ai-history-item strong { font-size: 13px; line-height: 1.45; }
+.ai-history-item span { color: var(--muted); font-size: 12px; }
 .meta-grid { display: grid; grid-template-columns: repeat(4, minmax(120px, 1fr)); gap: 12px; margin-bottom: 12px; }
 .wide-field { grid-column: span 4; }
 .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px; background: #fff4e8; border: 1px solid var(--line); border-radius: 8px; margin-bottom: 12px; }

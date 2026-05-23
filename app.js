@@ -1,6 +1,7 @@
 "use strict";
 const STORAGE_KEY = "diary-record-app.entries.v1";
 const ACTIVE_KEY = "diary-record-app.active-id.v1";
+const AI_HISTORY_KEY = "diary-record-app.ai-history.v1";
 const AUTOSAVE_DELAY = 500;
 const moods = ["开心", "普通", "难过", "兴奋", "生气", "好奇", "平静", "有点累", "很自豪", "想探索"];
 const weathers = [
@@ -41,6 +42,7 @@ let entries = [];
 let activeId = null;
 let saveTimer = null;
 let aiSuggestion = "";
+let aiHistory = [];
 let recognition = null;
 let aiRecognition = null;
 let listening = false;
@@ -60,6 +62,7 @@ const wordCount = $("#wordCount");
 const imageGrid = $("#imageGrid");
 const aiPreview = $("#aiPreview");
 const aiInstructionInput = $("#aiInstructionInput");
+const aiHistoryList = $("#aiHistoryList");
 const promptBox = $("#promptBox");
 function todayString() {
   const now = new Date();
@@ -95,9 +98,52 @@ function formatDateLabel(dateText) {
 function setStatus(message) {
   statusText.textContent = message;
 }
+function formatTimeLabel(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hour = String(date.getHours()).padStart(2, "0");
+  const minute = String(date.getMinutes()).padStart(2, "0");
+  return `${month}-${day} ${hour}:${minute}`;
+}
 function markDirty(message = "有新内容，还没有保存。") {
   hasUnsavedChanges = true;
   setStatus(message);
+}
+function loadAiHistory() {
+  try {
+    aiHistory = JSON.parse(localStorage.getItem(AI_HISTORY_KEY) || "[]");
+  } catch (error) {
+    aiHistory = [];
+  }
+}
+function saveAiHistory() {
+  localStorage.setItem(AI_HISTORY_KEY, JSON.stringify(aiHistory));
+}
+function addAiHistoryItem(instruction, diaryText, reply) {
+  aiHistory.unshift({
+    id: makeId(),
+    instruction,
+    diaryText,
+    reply,
+    createdAt: new Date().toISOString(),
+  });
+  if (aiHistory.length > 50) aiHistory = aiHistory.slice(0, 50);
+  saveAiHistory();
+  renderAiHistory();
+}
+function renderAiHistory() {
+  if (!aiHistoryList) return;
+  if (!aiHistory.length) {
+    aiHistoryList.innerHTML = `<div class="ai-history-empty">还没有 AI 对话记录。</div>`;
+    return;
+  }
+  aiHistoryList.innerHTML = aiHistory.map((item) => {
+    const instruction = item.instruction.slice(0, 42) || "没有内容";
+    const reply = item.reply.slice(0, 44) || "没有回复";
+    return `<button class="ai-history-item" data-ai-history-id="${item.id}" type="button"><strong>${escapeHtml(instruction)}</strong><span>${escapeHtml(reply)}</span><span>${formatTimeLabel(item.createdAt)}</span></button>`;
+  }).join("");
 }
 function loadEntries() {
   try {
@@ -276,7 +322,11 @@ async function requestAiPolish() {
     const response = await fetch("/api/deepseek", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text, instruction }),
+      body: JSON.stringify({
+        text,
+        instruction,
+        history: aiHistory.slice(0, 20),
+      }),
     });
     const data = await response.json();
     if (!response.ok || !data.ok) {
@@ -284,6 +334,7 @@ async function requestAiPolish() {
     }
     aiSuggestion = data.text;
     aiPreview.textContent = aiSuggestion;
+    addAiHistoryItem(instruction, text, aiSuggestion);
     setStatus("DeepSeek 已经回复。");
   } catch (error) {
     aiSuggestion = "";
@@ -456,6 +507,22 @@ function bindEvents() {
   });
   $("#sendAiBtn").addEventListener("click", requestAiPolish);
   $("#aiVoiceBtn").addEventListener("click", toggleAiVoice);
+  $("#clearAiHistoryBtn").addEventListener("click", () => {
+    aiHistory = [];
+    saveAiHistory();
+    renderAiHistory();
+    setStatus("AI 记录已经清空。");
+  });
+  aiHistoryList.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-ai-history-id]");
+    if (!button) return;
+    const item = aiHistory.find((record) => record.id === button.dataset.aiHistoryId);
+    if (!item) return;
+    aiInstructionInput.value = item.instruction;
+    aiSuggestion = item.reply;
+    aiPreview.textContent = item.reply;
+    setStatus("已经打开一条 AI 记录。");
+  });
   $("#acceptAiBtn").addEventListener("click", () => {
     if (!aiSuggestion) return;
     editor.innerHTML = aiSuggestion.split("\n").map((line) => `<p>${escapeHtml(line)}</p>`).join("");
@@ -487,11 +554,13 @@ function boot() {
   fillSelect(moodSelect, moods);
   fillSelect(weatherSelect, weathers);
   loadEntries();
+  loadAiHistory();
   renderTemplates();
   renderPrompt();
   setupVoice();
   bindEvents();
   renderAll();
+  renderAiHistory();
   setStatus("准备好了，可以开始写日记。");
 }
 const diaryWritingPromptBank = Object.freeze([

@@ -88,6 +88,8 @@ DEEPSEEK_BASE_URL=https://api.deepseek.com
 - 上传图片。
 - 图片说明和删除图片。
 - DeepSeek AI：用户自己打字或语音说的话会直接发给 DeepSeek。
+- AI 记录：可以查看之前和 DeepSeek 的对话。
+- 发送新消息时，DeepSeek 可以看到之前的 AI 记录。
 - 语音输入尝试。
 - 写作提示和日记模板。
 - 导出 Markdown。

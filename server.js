@@ -56,7 +56,24 @@ function buildPolishPrompt(text, instruction) {
   return `${instruction}\n\n当前日记内容：\n${text}`;
 }
 
-async function callDeepSeek(text, instruction) {
+function buildHistoryMessages(history) {
+  if (!Array.isArray(history)) return [];
+  return history
+    .slice(0, 20)
+    .reverse()
+    .flatMap((item) => {
+      const instruction = String(item?.instruction || "").trim();
+      const diaryText = String(item?.diaryText || "").trim();
+      const reply = String(item?.reply || "").trim();
+      const userContent = diaryText ? `${instruction}\n\n当前日记内容：\n${diaryText}` : instruction;
+      const messages = [];
+      if (userContent) messages.push({ role: "user", content: userContent });
+      if (reply) messages.push({ role: "assistant", content: reply });
+      return messages;
+    });
+}
+
+async function callDeepSeek(text, instruction, history) {
   const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) {
     const error = new Error("还没有配置 DeepSeek Token。");
@@ -76,6 +93,7 @@ async function callDeepSeek(text, instruction) {
       model,
       temperature: 0.6,
       messages: [
+        ...buildHistoryMessages(history),
         {
           role: "user",
           content: buildPolishPrompt(text, instruction),
@@ -103,11 +121,12 @@ async function handleDeepSeek(request, response) {
     const payload = JSON.parse(body || "{}");
     const text = String(payload.text || "").trim();
     const instruction = String(payload.instruction || "").trim();
+    const history = Array.isArray(payload.history) ? payload.history : [];
     if (!instruction) {
       sendJson(response, 400, { ok: false, error: "请先对 DeepSeek 说一句话。" });
       return;
     }
-    const result = await callDeepSeek(text, instruction);
+    const result = await callDeepSeek(text, instruction, history);
     sendJson(response, 200, { ok: true, text: result, provider: "deepseek" });
   } catch (error) {
     const status = error.code === "NO_DEEPSEEK_KEY" ? 501 : 500;
