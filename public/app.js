@@ -351,6 +351,59 @@ function tidyText() {
   editor.innerHTML = text.split("\n\n").map((part) => `<p>${escapeHtml(part)}</p>`).join("");
   scheduleSave();
 }
+function textToParagraphs(text) {
+  return String(text || "").split(/\n{2,}/).map((part) => part.trim()).filter(Boolean).map((part) => `<p>${escapeHtml(part).replace(/\n/g, "<br>")}</p>`).join("");
+}
+function parseAiToolPayload(rawText) {
+  const cleaned = String(rawText || "").trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "");
+  try {
+    const payload = JSON.parse(cleaned);
+    return {
+      reply: String(payload.reply || "已经写进日记。"),
+      tools: Array.isArray(payload.tools) ? payload.tools : [],
+    };
+  } catch (error) {
+    return {
+      reply: "DeepSeek 写了一段内容，我已经放进日记。",
+      tools: [{ name: "append_diary", value: rawText }],
+    };
+  }
+}
+function runDiaryAiTools(tools) {
+  const used = [];
+  (tools || []).forEach((tool) => {
+    const name = String(tool?.name || "").trim();
+    const value = tool?.value;
+    if (name === "append_diary") {
+      insertTextAtEnd(String(value || ""));
+      used.push("追加正文");
+    } else if (name === "replace_diary") {
+      editor.innerHTML = textToParagraphs(value);
+      used.push("替换正文");
+    } else if (name === "tidy_diary") {
+      tidyText();
+      used.push("整理格式");
+    } else if (name === "set_title") {
+      titleInput.value = String(value || "").trim() || titleInput.value;
+      used.push("修改标题");
+    } else if (name === "set_mood" && moods.includes(String(value))) {
+      moodSelect.value = String(value);
+      used.push("设置心情");
+    } else if (name === "set_weather" && weathers.includes(String(value))) {
+      weatherSelect.value = String(value);
+      used.push("设置天气");
+    } else if (name === "set_tags") {
+      const tags = Array.isArray(value) ? value : normalizeTags(String(value || ""));
+      tagsInput.value = tags.map((tag) => String(tag).trim()).filter(Boolean).join(", ");
+      used.push("设置标签");
+    }
+  });
+  collectActiveEntry();
+  saveEntries();
+  renderEntryList();
+  updateCounts();
+  return used;
+}
 async function requestAiPolish() {
   const text = plainTextFromHtml(editor.innerHTML).trim();
   const instruction = aiInstructionInput.value.trim();
@@ -385,6 +438,45 @@ async function requestAiPolish() {
     aiSuggestion = "";
     aiPreview.textContent = error.message || "DeepSeek 请求失败了。";
     setStatus("DeepSeek 没有成功返回，请检查服务或 Token。");
+  }
+}
+async function requestAiWriteToDiary() {
+  const text = plainTextFromHtml(editor.innerHTML).trim();
+  const instruction = aiInstructionInput.value.trim();
+  if (!instruction) {
+    aiSuggestion = "";
+    aiPreview.textContent = "请先告诉 DeepSeek 要写什么，或者用语音说。";
+    return;
+  }
+
+  aiPreview.textContent = "DeepSeek 正在调用工具写日记……";
+  setStatus("正在让 DeepSeek 写进日记……");
+
+  try {
+    const response = await fetch("/api/deepseek", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text,
+        instruction,
+        mode: "diary_tools",
+        history: getActiveAiHistory().slice(0, 20),
+      }),
+    });
+    const data = await response.json();
+    if (!response.ok || !data.ok) {
+      throw new Error(data.error || "DeepSeek 请求失败。");
+    }
+    const payload = parseAiToolPayload(data.text);
+    const usedTools = runDiaryAiTools(payload.tools);
+    aiSuggestion = payload.reply;
+    aiPreview.textContent = usedTools.length ? `${payload.reply}\n\n已使用：${usedTools.join("、")}` : payload.reply;
+    addAiHistoryItem(instruction, text, data.text);
+    setStatus("DeepSeek 已经写进右边的日记框。");
+  } catch (error) {
+    aiSuggestion = "";
+    aiPreview.textContent = error.message || "DeepSeek 没有写成功。";
+    setStatus("DeepSeek 没有成功写入，请检查服务或 Token。");
   }
 }
 function exportFile(filename, content, type) {
@@ -556,6 +648,7 @@ function bindEvents() {
     updateCounts();
   });
   $("#sendAiBtn").addEventListener("click", requestAiPolish);
+  $("#writeAiBtn").addEventListener("click", requestAiWriteToDiary);
   $("#aiVoiceBtn").addEventListener("click", toggleAiVoice);
   $("#refreshAiThreadBtn").addEventListener("click", refreshAiConversation);
   $("#clearAiHistoryBtn").addEventListener("click", () => {

@@ -22,9 +22,37 @@ function readRequestBody(request) {
   });
 }
 
+const TOOL_MOODS = ["开心", "普通", "难过", "兴奋", "生气", "好奇", "平静", "有点累", "很自豪", "想探索"];
+const TOOL_WEATHERS = ["晴天", "阴天", "小雨", "大雨", "下雪", "有风", "很热", "很冷", "多云", "看见星星", "暴风雨", "雷阵雨", "冰雹", "台风", "飓风", "龙卷风", "沙尘暴", "大雾", "海啸", "洪水", "火山爆发", "地震", "极光", "流星雨"];
+
 function buildPrompt(text, instruction) {
   if (!text) return instruction;
   return `${instruction}\n\n当前日记内容：\n${text}`;
+}
+
+function buildToolPrompt(text, instruction) {
+  return [
+    "你是日记网页里的 DeepSeek AI。用户希望你直接写到右边的日记框，并且可以调用网页工具。",
+    "只返回 JSON，不要写 Markdown，不要用代码块。",
+    "JSON 格式必须是：",
+    "{\"reply\":\"给用户看的简短说明\",\"tools\":[{\"name\":\"工具名\",\"value\":\"内容\"}]}",
+    "可用工具：",
+    "- append_diary：把 value 追加到日记正文后面。",
+    "- replace_diary：用 value 替换整篇日记正文。",
+    "- tidy_diary：整理当前日记格式，value 可以为空字符串。",
+    "- set_title：把标题改成 value。",
+    "- set_mood：把心情改成 value，只能使用这些值：" + TOOL_MOODS.join("、"),
+    "- set_weather：把天气改成 value，只能使用这些值：" + TOOL_WEATHERS.join("、"),
+    "- set_tags：设置标签，value 是字符串数组，比如 [\"学习\",\"开心\"]。",
+    "如果用户只是让你写一段内容，优先使用 append_diary。用户明确说重写、替换、改成这样时，才使用 replace_diary。",
+    "不要编造用户没有要求的事实。",
+    "",
+    "用户的话：",
+    instruction,
+    "",
+    "当前日记内容：",
+    text || "（现在日记是空的）",
+  ].join("\n");
 }
 
 function buildHistoryMessages(history) {
@@ -44,7 +72,7 @@ function buildHistoryMessages(history) {
     });
 }
 
-async function callDeepSeek(text, instruction, history) {
+async function callDeepSeek(text, instruction, history, mode) {
   const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) {
     const error = new Error("还没有配置 DeepSeek Token。");
@@ -67,7 +95,7 @@ async function callDeepSeek(text, instruction, history) {
         ...buildHistoryMessages(history),
         {
           role: "user",
-          content: buildPrompt(text, instruction),
+          content: mode === "diary_tools" ? buildToolPrompt(text, instruction) : buildPrompt(text, instruction),
         },
       ],
     }),
@@ -98,11 +126,12 @@ module.exports = async function handler(request, response) {
     const text = String(payload.text || "").trim();
     const instruction = String(payload.instruction || "").trim();
     const history = Array.isArray(payload.history) ? payload.history : [];
+    const mode = payload.mode === "diary_tools" ? "diary_tools" : "chat";
     if (!instruction) {
       sendJson(response, 400, { ok: false, error: "请先对 DeepSeek 说一句话。" });
       return;
     }
-    const result = await callDeepSeek(text, instruction, history);
+    const result = await callDeepSeek(text, instruction, history, mode);
     sendJson(response, 200, { ok: true, text: result, provider: "deepseek" });
   } catch (error) {
     const status = error.code === "NO_DEEPSEEK_KEY" ? 501 : 500;
