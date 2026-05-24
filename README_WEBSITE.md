@@ -98,6 +98,7 @@ DEEPSEEK_BASE_URL=https://api.deepseek.com
 - 写作提示和日记模板。
 - 导出 Markdown。
 - 导出 JSON。
+- 访问记录：网页打开时记录进入次数和不同访客数。
 
 ## 部署到真正网站的下一步
 
@@ -117,3 +118,16 @@ DEEPSEEK_BASE_URL=https://api.deepseek.com
 API 密钥像家门钥匙，如果放在网页代码里，别人打开网页时可能看见它。
 
 现在已经加了本地后端 `server.js`，用它来安全调用 DeepSeek。
+
+## 访问记录说明
+
+访问记录接口是 `/api/visit`。
+
+如果 Vercel 配置了下面两个环境变量，会使用云端 Redis 统计：
+
+```text
+UPSTASH_REDIS_REST_URL=你的 Upstash Redis REST URL
+UPSTASH_REDIS_REST_TOKEN=你的 Upstash Redis REST Token
+```
+
+如果没有配置，会使用备用记录：本机开发时写入 `tmp/visitor-stats.json`，Vercel 上使用临时内存统计。

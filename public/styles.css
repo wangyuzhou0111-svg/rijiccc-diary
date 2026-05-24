@@ -132,6 +132,8 @@ p { margin: 4px 0 0; color: var(--muted); }
 .stats-grid div { border: 1px solid var(--line); border-radius: 8px; padding: 10px; background: #fff; }
 .stats-grid dt { color: var(--muted); font-size: 12px; }
 .stats-grid dd { margin: 4px 0 0; font-size: 24px; font-weight: 700; }
+.visitor-grid { margin-top: 0; }
+.visitor-note { font-size: 12px; line-height: 1.55; margin-top: 10px; }
 .sync-note { font-size: 12px; line-height: 1.55; margin-bottom: 10px; }
 .sync-code-input { width: 100%; min-height: 118px; resize: vertical; border: 1px solid var(--line); border-radius: 8px; padding: 10px; background: #fff; color: var(--ink); outline: none; font-size: 12px; line-height: 1.45; }
 .sync-code-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }

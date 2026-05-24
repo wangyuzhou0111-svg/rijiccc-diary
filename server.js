@@ -7,6 +7,7 @@ const path = require("node:path");
 const ROOT = __dirname;
 const HOST = "127.0.0.1";
 const PORT = Number(process.env.PORT || 7811);
+const LOCAL_VISIT_FILE = path.join(ROOT, "tmp", "visitor-stats.json");
 
 function loadLocalEnv() {
   const envFiles = [".env.local", ".env"];
@@ -49,6 +50,50 @@ function readRequestBody(request) {
     request.on("end", () => resolve(body));
     request.on("error", reject);
   });
+}
+
+function readLocalVisitStats() {
+  try {
+    const raw = fs.readFileSync(LOCAL_VISIT_FILE, "utf8");
+    const data = JSON.parse(raw);
+    return {
+      total: Number(data.total || 0),
+      visitors: Array.isArray(data.visitors) ? data.visitors : [],
+    };
+  } catch (error) {
+    return { total: 0, visitors: [] };
+  }
+}
+
+function writeLocalVisitStats(stats) {
+  fs.mkdirSync(path.dirname(LOCAL_VISIT_FILE), { recursive: true });
+  fs.writeFileSync(LOCAL_VISIT_FILE, JSON.stringify(stats, null, 2));
+}
+
+async function handleVisit(request, response) {
+  try {
+    const stats = readLocalVisitStats();
+    if (request.method === "POST") {
+      const body = await readRequestBody(request);
+      const payload = JSON.parse(body || "{}");
+      const visitorId = String(payload.visitorId || "").trim().slice(0, 120);
+      if (!visitorId) {
+        sendJson(response, 400, { ok: false, error: "缺少访客编号。" });
+        return;
+      }
+      stats.total += 1;
+      if (!stats.visitors.includes(visitorId)) stats.visitors.push(visitorId);
+      writeLocalVisitStats(stats);
+    }
+    sendJson(response, 200, {
+      ok: true,
+      totalVisits: stats.total,
+      uniqueVisitors: stats.visitors.length,
+      storage: "local",
+    });
+  } catch (error) {
+    sendJson(response, 500, { ok: false, error: error.message || "访问记录失败。" });
+  }
 }
 
 const TOOL_MOODS = ["开心", "普通", "难过", "兴奋", "生气", "好奇", "平静", "有点累", "很自豪", "想探索"];
@@ -210,6 +255,10 @@ const server = http.createServer((request, response) => {
   }
   if (request.method === "POST" && request.url === "/api/deepseek") {
     handleDeepSeek(request, response);
+    return;
+  }
+  if ((request.method === "GET" || request.method === "POST") && request.url === "/api/visit") {
+    handleVisit(request, response);
     return;
   }
   if (request.method === "GET" || request.method === "HEAD") {

@@ -3,6 +3,7 @@ const STORAGE_KEY = "diary-record-app.entries.v1";
 const ACTIVE_KEY = "diary-record-app.active-id.v1";
 const AI_HISTORY_KEY = "diary-record-app.ai-history.v1";
 const AI_THREAD_KEY = "diary-record-app.ai-thread-id.v1";
+const VISITOR_ID_KEY = "diary-record-app.visitor-id.v1";
 const AUTOSAVE_DELAY = 500;
 const documentTypes = [
   { value: "diary", label: "日记", title: "新的日记" },
@@ -86,6 +87,10 @@ const letterPhoneInput = $("#letterPhoneInput");
 const letterGreetingInput = $("#letterGreetingInput");
 const syncCodeInput = $("#syncCodeInput");
 const promptBox = $("#promptBox");
+const visitTotalCount = $("#visitTotalCount");
+const visitUniqueCount = $("#visitUniqueCount");
+const visitorStorageBadge = $("#visitorStorageBadge");
+const visitorNote = $("#visitorNote");
 function todayString() {
   const now = new Date();
   const year = now.getFullYear();
@@ -95,6 +100,14 @@ function todayString() {
 }
 function makeId() {
   return `diary-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+function getVisitorId() {
+  let visitorId = localStorage.getItem(VISITOR_ID_KEY);
+  if (!visitorId) {
+    visitorId = `visitor-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    localStorage.setItem(VISITOR_ID_KEY, visitorId);
+  }
+  return visitorId;
 }
 function escapeHtml(text) {
   return String(text).replace(/[&<>"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;" }[char]));
@@ -408,6 +421,35 @@ function updateCounts() {
   $("#statImages").textContent = entry?.images?.length || 0;
   $("#statTags").textContent = tags.length;
   $("#statVersions").textContent = entry?.versions?.length || 0;
+}
+function renderVisitStats(stats) {
+  if (!stats) return;
+  visitTotalCount.textContent = Number(stats.totalVisits || 0);
+  visitUniqueCount.textContent = Number(stats.uniqueVisitors || 0);
+  const storageNames = {
+    upstash: "云端",
+    local: "本机",
+    memory: "临时",
+  };
+  visitorStorageBadge.textContent = storageNames[stats.storage] || "记录中";
+  visitorNote.textContent = stats.storage === "upstash"
+    ? "现在使用云端记录，不同设备都能一起统计。"
+    : "现在是备用记录；配置 Upstash/Vercel KV 后可以变成稳定云端统计。";
+}
+async function recordVisit() {
+  try {
+    const response = await fetch("/api/visit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ visitorId: getVisitorId() }),
+    });
+    const data = await response.json();
+    if (!response.ok || !data.ok) throw new Error(data.error || "访问记录失败。");
+    renderVisitStats(data);
+  } catch (error) {
+    visitorStorageBadge.textContent = "离线";
+    visitorNote.textContent = "这次没有连上访问记录接口。";
+  }
 }
 function renderPrompt() {
   const item = diaryWritingPromptBank[Math.floor(Math.random() * diaryWritingPromptBank.length)];
@@ -981,6 +1023,7 @@ function boot() {
   bindEvents();
   renderAll();
   renderAiHistory();
+  recordVisit();
   setStatus("准备好了，可以开始写日记。");
 }
 const diaryWritingPromptBank = Object.freeze([
