@@ -566,42 +566,7 @@ function runDiaryAiTools(tools) {
   return used;
 }
 async function requestAiPolish() {
-  const text = plainTextFromHtml(editor.innerHTML).trim();
-  const instruction = aiInstructionInput.value.trim();
-  if (!instruction) {
-    aiSuggestion = "";
-    aiPreview.textContent = "请先打字，或者用语音对 DeepSeek 说一句话。";
-    return;
-  }
-
-  setAiBusy(true, "DeepSeek 正在回复……");
-  setStatus("正在请求 DeepSeek……");
-
-  try {
-    const response = await fetch("/api/deepseek", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        text,
-        instruction,
-        history: getActiveAiHistory().slice(0, 20),
-      }),
-    });
-    const data = await response.json();
-    if (!response.ok || !data.ok) {
-      throw new Error(data.error || "DeepSeek 请求失败。");
-    }
-    aiSuggestion = data.text;
-    aiPreview.textContent = aiSuggestion;
-    addAiHistoryItem(instruction, text, aiSuggestion);
-    setStatus("DeepSeek 已经回复。");
-  } catch (error) {
-    aiSuggestion = "";
-    aiPreview.textContent = error.message || "DeepSeek 请求失败了。";
-    setStatus("DeepSeek 没有成功返回，请检查服务或 Token。");
-  } finally {
-    setAiBusy(false);
-  }
+  await requestAiWriteToDiary();
 }
 async function requestAiWriteToDiary() {
   const text = plainTextFromHtml(editor.innerHTML).trim();
@@ -612,7 +577,7 @@ async function requestAiWriteToDiary() {
     return;
   }
 
-  setAiBusy(true, "DeepSeek 正在调用工具写日记……");
+  setAiBusy(true, "DeepSeek 正在写进日记……");
   setStatus("正在让 DeepSeek 写进日记……");
 
   try {
@@ -633,7 +598,7 @@ async function requestAiWriteToDiary() {
     const payload = parseAiToolPayload(data.text);
     const usedTools = runDiaryAiTools(payload.tools);
     aiSuggestion = payload.reply;
-    aiPreview.textContent = usedTools.length ? `${payload.reply}\n\n已使用：${usedTools.join("、")}` : `${payload.reply}\n\n这次 DeepSeek 没有选择可执行工具，所以日记没有改动。`;
+    aiPreview.textContent = usedTools.length ? `${payload.reply}\n\n已写入：${usedTools.join("、")}` : `${payload.reply}\n\nDeepSeek 已回复，但没有可写入的内容。`;
     addAiHistoryItem(instruction, text, data.text);
     setStatus("DeepSeek 已经写进右边的日记框。");
   } catch (error) {
