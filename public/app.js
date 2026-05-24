@@ -76,6 +76,7 @@ const aiHistoryList = $("#aiHistoryList");
 const sendAiBtn = $("#sendAiBtn");
 const writeAiBtn = $("#writeAiBtn");
 const aiVoiceBtn = $("#aiVoiceBtn");
+const continueAiBtn = $("#continueAiBtn");
 const blogFields = $("#blogFields");
 const blogSlugInput = $("#blogSlugInput");
 const blogStatusSelect = $("#blogStatusSelect");
@@ -83,6 +84,7 @@ const blogSummaryInput = $("#blogSummaryInput");
 const letterFields = $("#letterFields");
 const letterPhoneInput = $("#letterPhoneInput");
 const letterGreetingInput = $("#letterGreetingInput");
+const syncCodeInput = $("#syncCodeInput");
 const promptBox = $("#promptBox");
 function todayString() {
   const now = new Date();
@@ -129,6 +131,12 @@ function makeSlug(text) {
     .replace(/[^a-z0-9\u4e00-\u9fa5-]/g, "")
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "") || `post-${todayString()}`;
+}
+function encodeSyncText(text) {
+  return btoa(unescape(encodeURIComponent(text)));
+}
+function decodeSyncText(code) {
+  return decodeURIComponent(escape(atob(String(code || "").trim())));
 }
 function setStatus(message) {
   statusText.textContent = message;
@@ -233,6 +241,19 @@ function saveActiveEntry() {
   renderEntryList();
   renderImages();
   updateCounts();
+}
+function getEntryCopyText(entry = getActiveEntry()) {
+  if (!entry) return "";
+  const lines = [
+    entry.title || "没有标题",
+    "",
+    `类型：${getDocumentType(entry.kind || "diary").label}`,
+    `日期：${entry.date || todayString()}`,
+    `标签：${(entry.tags || []).join(", ") || "无"}`,
+    "",
+    plainTextFromHtml(entry.body),
+  ];
+  return lines.join("\n").trim();
 }
 function scheduleSave() {
   clearTimeout(saveTimer);
@@ -420,7 +441,7 @@ function textToParagraphs(text) {
   return String(text || "").split(/\n{2,}/).map((part) => part.trim()).filter(Boolean).map((part) => `<p>${escapeHtml(part).replace(/\n/g, "<br>")}</p>`).join("");
 }
 function setAiBusy(isBusy, message) {
-  [sendAiBtn, writeAiBtn, aiVoiceBtn].forEach((button) => {
+  [sendAiBtn, writeAiBtn, continueAiBtn, aiVoiceBtn].forEach((button) => {
     if (!button) return;
     button.disabled = isBusy;
     button.classList.toggle("is-loading", isBusy);
@@ -639,12 +660,80 @@ function exportJson() {
 async function copyPlainText() {
   collectActiveEntry();
   const entry = getActiveEntry();
-  const text = plainTextFromHtml(entry.body);
+  const text = getEntryCopyText(entry);
   try {
     await navigator.clipboard.writeText(text);
-    setStatus("正文文字已经复制。");
+    setStatus("当前作品已经一键复制。");
   } catch (error) {
     setStatus("这个浏览器没有允许复制，可以手动选中文字复制。");
+  }
+}
+function continueWithAi() {
+  const entry = getActiveEntry();
+  const type = getDocumentType(entry?.kind || "diary").label;
+  const currentText = plainTextFromHtml(editor.innerHTML).trim();
+  aiInstructionInput.value = currentText
+    ? `请接着这篇${type}继续写下去，保持同样的语气，不要重复已经写过的内容。`
+    : `请帮我开始写一篇${type}，内容自然一点。`;
+  requestAiWriteToDiary();
+}
+function makeSyncCode() {
+  collectActiveEntry();
+  saveEntries();
+  const payload = {
+    app: "rijiccc-diary",
+    version: 2,
+    exportedAt: new Date().toISOString(),
+    activeId,
+    aiThreadId,
+    entries,
+    aiHistory,
+  };
+  syncCodeInput.value = encodeSyncText(JSON.stringify(payload));
+  setStatus("同步码已经生成，可以复制到另一台设备导入。");
+}
+async function copySyncCode() {
+  if (!syncCodeInput.value.trim()) makeSyncCode();
+  try {
+    await navigator.clipboard.writeText(syncCodeInput.value.trim());
+    setStatus("同步码已经复制。");
+  } catch (error) {
+    syncCodeInput.select();
+    setStatus("请手动复制同步码。");
+  }
+}
+function importSyncCode() {
+  const code = syncCodeInput.value.trim();
+  if (!code) {
+    setStatus("请先粘贴同步码。");
+    return;
+  }
+  try {
+    const payload = JSON.parse(decodeSyncText(code));
+    if (payload.app !== "rijiccc-diary" || !Array.isArray(payload.entries)) {
+      throw new Error("同步码不是这个日记网站生成的。");
+    }
+    const byId = new Map(entries.map((entry) => [entry.id, entry]));
+    payload.entries.forEach((incoming) => {
+      const old = byId.get(incoming.id);
+      if (!old || new Date(incoming.updatedAt || 0) >= new Date(old.updatedAt || 0)) {
+        byId.set(incoming.id, incoming);
+      }
+    });
+    entries = Array.from(byId.values()).sort((a, b) => new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0));
+    const historyById = new Map(aiHistory.map((item) => [item.id, item]));
+    (payload.aiHistory || []).forEach((item) => historyById.set(item.id, item));
+    aiHistory = Array.from(historyById.values()).sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)).slice(0, 50);
+    activeId = payload.activeId && entries.some((entry) => entry.id === payload.activeId) ? payload.activeId : entries[0]?.id;
+    aiThreadId = payload.aiThreadId || aiThreadId || makeId();
+    saveAiThreadId();
+    saveAiHistory();
+    saveEntries();
+    renderAll();
+    renderAiHistory();
+    setStatus("同步码已经导入，这台设备也有这些作品了。");
+  } catch (error) {
+    setStatus(error.message || "同步码导入失败，请检查是不是复制完整。");
   }
 }
 function buildLetterText(entry) {
@@ -769,6 +858,7 @@ function bindEvents() {
   $("#newEntryBtn").addEventListener("click", () => createEntry(true));
   $("#saveEntryBtn").addEventListener("click", saveActiveEntry);
   $("#exitBtn").addEventListener("click", exitApp);
+  $("#copyEntryBtn").addEventListener("click", copyPlainText);
   $("#exportMarkdownBtn").addEventListener("click", exportMarkdown);
   $("#exportJsonBtn").addEventListener("click", exportJson);
   $("#exportHtmlBtn").addEventListener("click", exportHtml);
@@ -826,6 +916,7 @@ function bindEvents() {
   });
   $("#sendAiBtn").addEventListener("click", requestAiPolish);
   $("#writeAiBtn").addEventListener("click", requestAiWriteToDiary);
+  $("#continueAiBtn").addEventListener("click", continueWithAi);
   $("#aiVoiceBtn").addEventListener("click", toggleAiVoice);
   $("#refreshAiThreadBtn").addEventListener("click", refreshAiConversation);
   $("#clearAiHistoryBtn").addEventListener("click", () => {
@@ -856,6 +947,9 @@ function bindEvents() {
     updateCounts();
   });
   $("#clearAiBtn").addEventListener("click", () => { aiSuggestion = ""; aiPreview.textContent = "已经清空 DeepSeek 回复。"; });
+  $("#makeSyncCodeBtn").addEventListener("click", makeSyncCode);
+  $("#copySyncCodeBtn").addEventListener("click", copySyncCode);
+  $("#importSyncCodeBtn").addEventListener("click", importSyncCode);
   $("#randomPromptBtn").addEventListener("click", renderPrompt);
   $("#templateList").addEventListener("click", (event) => {
     const button = event.target.closest("[data-template]");

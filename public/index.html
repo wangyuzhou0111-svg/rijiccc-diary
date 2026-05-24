@@ -23,6 +23,7 @@
           <button id="saveEntryBtn" class="soft-button" type="button">保存</button>
         </div>
         <div class="action-group export-actions">
+          <button id="copyEntryBtn" class="soft-button" type="button">一键复制</button>
           <button id="exportMarkdownBtn" class="soft-button" type="button">导出 Markdown</button>
           <button id="exportJsonBtn" class="soft-button" type="button">导出 JSON</button>
           <button id="exitBtn" class="soft-button danger-button" type="button">退出</button>
@@ -41,6 +42,7 @@
           <div class="ai-buttons">
             <button id="sendAiBtn" class="primary-button" type="button">发送给 DeepSeek</button>
             <button id="writeAiBtn" class="soft-button" type="button">AI 写到日记</button>
+            <button id="continueAiBtn" class="soft-button" type="button">一键续写</button>
             <button id="aiVoiceBtn" class="soft-button" type="button">语音告诉 AI</button>
           </div>
           <div id="aiPreview" class="ai-preview">打字或语音说给 DeepSeek，它会直接回复。</div>
@@ -188,6 +190,19 @@
             <div><dt>标签</dt><dd id="statTags">0</dd></div>
             <div><dt>版本</dt><dd id="statVersions">0</dd></div>
           </dl>
+        </div>
+        <div class="panel sync-panel">
+          <div class="panel-title-row">
+            <h2>设备同步</h2>
+            <span class="badge">同步码</span>
+          </div>
+          <p class="sync-note">在这台设备生成同步码，到另一台设备粘贴导入，就能继续写。</p>
+          <textarea id="syncCodeInput" class="sync-code-input" placeholder="这里会出现同步码，也可以粘贴另一台设备的同步码"></textarea>
+          <div class="mini-actions sync-actions">
+            <button id="makeSyncCodeBtn" class="tiny-button" type="button">生成同步码</button>
+            <button id="copySyncCodeBtn" class="tiny-button" type="button">复制同步码</button>
+            <button id="importSyncCodeBtn" class="tiny-button" type="button">导入同步码</button>
+          </div>
         </div>
       </aside>
     </main>

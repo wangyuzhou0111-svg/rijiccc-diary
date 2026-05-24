@@ -132,6 +132,10 @@ p { margin: 4px 0 0; color: var(--muted); }
 .stats-grid div { border: 1px solid var(--line); border-radius: 8px; padding: 10px; background: #fff; }
 .stats-grid dt { color: var(--muted); font-size: 12px; }
 .stats-grid dd { margin: 4px 0 0; font-size: 24px; font-weight: 700; }
+.sync-note { font-size: 12px; line-height: 1.55; margin-bottom: 10px; }
+.sync-code-input { width: 100%; min-height: 118px; resize: vertical; border: 1px solid var(--line); border-radius: 8px; padding: 10px; background: #fff; color: var(--ink); outline: none; font-size: 12px; line-height: 1.45; }
+.sync-code-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.sync-actions { margin-top: 8px; }
 @media (max-width: 1180px) {
   .workspace { grid-template-columns: 300px minmax(420px, 1fr); }
   .helper-area { grid-column: 1 / -1; grid-template-columns: repeat(2, 1fr); }
@@ -183,6 +187,7 @@ p { margin: 4px 0 0; color: var(--muted); }
   .ai-instruction-input { min-height: 66px; }
   .ai-preview, .prompt-box { min-height: 70px; margin: 8px 0; }
   .ai-history-list { max-height: 120px; }
+  .sync-code-input { min-height: 72px; }
 }
 @keyframes spin {
   to { transform: rotate(360deg); }
