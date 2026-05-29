@@ -26,6 +26,7 @@
           <button id="copyEntryBtn" class="soft-button" type="button">一键复制</button>
           <button id="exportMarkdownBtn" class="soft-button" type="button">导出 Markdown</button>
           <button id="exportJsonBtn" class="soft-button" type="button">导出 JSON</button>
+          <button id="exportAllJsonBtn" class="soft-button" type="button">导出全部</button>
           <button id="exitBtn" class="soft-button danger-button" type="button">退出</button>
         </div>
       </div>
@@ -72,9 +73,18 @@
             <button class="library-tab" data-library-filter="blog" type="button">博客</button>
             <button class="library-tab" data-library-filter="letter" type="button">写信</button>
             <button class="library-tab" data-library-filter="favorite" type="button">收藏</button>
+            <button class="library-tab" data-library-filter="pinned" type="button">置顶</button>
           </div>
           <label class="field-label" for="searchInput">搜索</label>
           <input id="searchInput" class="text-input directory-search" type="search" placeholder="标题、正文、标签">
+          <label class="field-label" for="sortSelect">排序</label>
+          <select id="sortSelect" class="text-input directory-search">
+            <option value="updated-desc">最近修改</option>
+            <option value="created-desc">最新创建</option>
+            <option value="created-asc">最早创建</option>
+            <option value="title-asc">标题 A-Z</option>
+            <option value="words-desc">字数最多</option>
+          </select>
           <div class="mini-actions directory-actions">
             <button id="todayBtn" class="tiny-button" type="button">今天</button>
             <button id="clearSearchBtn" class="tiny-button" type="button">清空</button>
@@ -160,6 +170,7 @@
             <button id="tidyBtn" class="tool-button" type="button">整理</button>
             <button id="copyPlainBtn" class="tool-button" type="button">复制文字</button>
             <button id="exportHtmlBtn" class="tool-button" type="button">导出 HTML</button>
+            <button id="focusModeBtn" class="tool-button" type="button">专注模式</button>
             <label class="tool-field">颜色 <input id="colorInput" type="color" value="#27324a"></label>
             <label class="tool-field">字号 <input id="sizeInput" type="range" min="16" max="34" value="20"></label>
             <button id="voiceBtn" class="tool-button voice-button" type="button">语音</button>
@@ -203,6 +214,18 @@
           <div class="goal-summary">
             <strong id="goalPercent">0%</strong>
             <span id="goalSummaryText">还没有设置目标。</span>
+          </div>
+        </div>
+        <div class="panel timer-panel">
+          <div class="panel-title-row">
+            <h2>写作计时器</h2>
+            <span id="timerBadge" class="badge">未开始</span>
+          </div>
+          <div id="timerDisplay" class="timer-display">00:00</div>
+          <div class="mini-actions timer-actions">
+            <button id="timerStartBtn" class="tiny-button" type="button">开始</button>
+            <button id="timerPauseBtn" class="tiny-button" type="button">暂停</button>
+            <button id="timerResetBtn" class="tiny-button" type="button">清零</button>
           </div>
         </div>
         <div class="panel version-panel">
