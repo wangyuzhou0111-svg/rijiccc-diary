@@ -46,6 +46,18 @@ const templates = [
   "如果今天是一颗行星，它会是：\n\n因为：\n它的颜色：\n它的故事："
 ];
 const helperWords = ["明亮", "安静", "认真", "勇敢", "好奇", "温暖", "清楚", "努力", "惊喜", "进步"];
+const titleIdeas = [
+  "今天的小发现",
+  "我想记住的一天",
+  "写给未来的自己",
+  "一次新的尝试",
+  "今天我学会了什么",
+  "脑袋里的小火花",
+  "值得收藏的瞬间",
+  "慢慢变厉害的一天",
+  "今天的观察报告",
+  "我的小小计划"
+];
 let entries = [];
 let activeId = null;
 let saveTimer = null;
@@ -67,10 +79,16 @@ const dateInput = $("#dateInput");
 const moodSelect = $("#moodSelect");
 const weatherSelect = $("#weatherSelect");
 const tagsInput = $("#tagsInput");
+const wordGoalInput = $("#wordGoalInput");
 const searchInput = $("#searchInput");
 const statusText = $("#statusText");
 const wordCount = $("#wordCount");
+const goalBarFill = $("#goalBarFill");
+const goalText = $("#goalText");
+const goalPercent = $("#goalPercent");
+const goalSummaryText = $("#goalSummaryText");
 const imageGrid = $("#imageGrid");
+const versionList = $("#versionList");
 const aiPreview = $("#aiPreview");
 const aiInstructionInput = $("#aiInstructionInput");
 const aiHistoryList = $("#aiHistoryList");
@@ -241,6 +259,11 @@ function loadEntries() {
   } else if (!entries.some((entry) => entry.id === activeId)) {
     activeId = entries[0].id;
   }
+  entries.forEach((entry) => {
+    entry.favorite = Boolean(entry.favorite);
+    entry.wordGoal = Math.max(0, Number(entry.wordGoal || 0));
+    entry.versions = Array.isArray(entry.versions) ? entry.versions : [];
+  });
 }
 function saveEntries() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
@@ -253,6 +276,7 @@ function saveActiveEntry() {
   saveEntries();
   renderEntryList();
   renderImages();
+  renderVersions();
   updateCounts();
 }
 function getEntryCopyText(entry = getActiveEntry()) {
@@ -277,6 +301,7 @@ function scheduleSave() {
     saveEntries();
     renderEntryList();
     renderImages();
+    renderVersions();
     updateCounts();
   }, AUTOSAVE_DELAY);
 }
@@ -291,6 +316,8 @@ function createEntry(shouldRender = true, kind = getNewEntryKind()) {
     mood: moods[0],
     weather: weathers[0],
     tags: [],
+    favorite: false,
+    wordGoal: 0,
     body: "",
     color: "#27324a",
     fontSize: 20,
@@ -320,6 +347,7 @@ function collectActiveEntry() {
   entry.mood = moodSelect.value;
   entry.weather = weatherSelect.value;
   entry.tags = normalizeTags(tagsInput.value);
+  entry.wordGoal = Math.max(0, Number(wordGoalInput.value || 0));
   entry.body = editor.innerHTML;
   entry.color = $("#colorInput").value;
   entry.fontSize = Number($("#sizeInput").value);
@@ -348,12 +376,15 @@ function renderEditor() {
   entry.kind = entry.kind || "diary";
   entry.blog = entry.blog || { slug: "", summary: "", status: "draft" };
   entry.letter = entry.letter || { phone: "", greeting: "" };
+  entry.favorite = Boolean(entry.favorite);
+  entry.wordGoal = Math.max(0, Number(entry.wordGoal || 0));
   docTypeSelect.value = entry.kind;
   titleInput.value = entry.title || "";
   dateInput.value = entry.date || todayString();
   moodSelect.value = entry.mood || moods[0];
   weatherSelect.value = entry.weather || weathers[0];
   tagsInput.value = (entry.tags || []).join(", ");
+  wordGoalInput.value = entry.wordGoal || "";
   editor.innerHTML = entry.body || "";
   editor.style.color = entry.color || "#27324a";
   editor.style.fontSize = `${entry.fontSize || 20}px`;
@@ -367,6 +398,7 @@ function renderEditor() {
   renderContextFields();
   updateCounts();
   renderImages();
+  renderVersions();
 }
 function renderContextFields() {
   const kind = docTypeSelect.value || "diary";
@@ -377,8 +409,8 @@ function renderEntryList() {
   const query = searchInput.value.trim().toLowerCase();
   const visible = entries.filter((entry) => {
     entry.kind = entry.kind || "diary";
-    const typeMatch = libraryFilter === "all" || entry.kind === libraryFilter;
-    const text = `${entry.title} ${plainTextFromHtml(entry.body)} ${(entry.tags || []).join(" ")} ${getDocumentType(entry.kind).label}`.toLowerCase();
+    const typeMatch = libraryFilter === "all" || (libraryFilter === "favorite" ? entry.favorite : entry.kind === libraryFilter);
+    const text = `${entry.title} ${plainTextFromHtml(entry.body)} ${(entry.tags || []).join(" ")} ${entry.mood || ""} ${entry.weather || ""} ${getDocumentType(entry.kind).label}`.toLowerCase();
     return typeMatch && (!query || text.includes(query));
   });
   $("#entryCountBadge").textContent = `${visible.length} 篇`;
@@ -386,8 +418,19 @@ function renderEntryList() {
     const activeClass = entry.id === activeId ? " active" : "";
     const text = plainTextFromHtml(entry.body).slice(0, 46) || "还没有正文";
     const type = getDocumentType(entry.kind || "diary");
-    return `<article class="entry-card${activeClass}" data-id="${entry.id}"><button class="entry-open-button" data-open-entry="${entry.id}" type="button"><span class="directory-line"><strong>${escapeHtml(entry.title || "没有标题")}</strong><em class="saved-mark">${escapeHtml(type.label)}</em></span><span>${formatDateLabel(entry.date)} · ${escapeHtml(entry.mood || "心情")}</span><span>${escapeHtml(text)}</span></button><button class="entry-delete-button" data-delete-entry="${entry.id}" type="button" aria-label="删除这篇作品">删除</button></article>`;
+    const favoriteClass = entry.favorite ? " is-favorite" : "";
+    const favoriteLabel = entry.favorite ? "取消收藏" : "收藏这篇";
+    return `<article class="entry-card${activeClass}" data-id="${entry.id}"><button class="entry-open-button" data-open-entry="${entry.id}" type="button"><span class="directory-line"><strong>${escapeHtml(entry.title || "没有标题")}</strong><em class="saved-mark">${escapeHtml(type.label)}</em></span><span>${formatDateLabel(entry.date)} · ${escapeHtml(entry.mood || "心情")} · ${escapeHtml(entry.weather || "天气")}</span><span>${escapeHtml(text)}</span></button><button class="entry-favorite-button${favoriteClass}" data-toggle-favorite="${entry.id}" type="button" aria-label="${favoriteLabel}">★</button><button class="entry-delete-button" data-delete-entry="${entry.id}" type="button" aria-label="删除这篇作品">删除</button></article>`;
   }).join("");
+}
+function toggleFavorite(entryId) {
+  const entry = entries.find((item) => item.id === entryId);
+  if (!entry) return;
+  entry.favorite = !entry.favorite;
+  entry.updatedAt = new Date().toISOString();
+  saveEntries();
+  renderEntryList();
+  setStatus(entry.favorite ? "已经收藏这篇作品。" : "已经取消收藏。");
 }
 function deleteEntry(entryId) {
   const entry = entries.find((item) => item.id === entryId);
@@ -416,11 +459,66 @@ function updateCounts() {
   const text = plainTextFromHtml(editor.innerHTML);
   const words = countWords(text);
   const tags = normalizeTags(tagsInput.value);
+  const goal = Math.max(0, Number(wordGoalInput.value || entry?.wordGoal || 0));
+  const percent = goal ? Math.min(100, Math.round((words / goal) * 100)) : 0;
   wordCount.textContent = `${words} 字`;
   $("#statWords").textContent = words;
   $("#statImages").textContent = entry?.images?.length || 0;
   $("#statTags").textContent = tags.length;
   $("#statVersions").textContent = entry?.versions?.length || 0;
+  goalBarFill.style.width = `${percent}%`;
+  goalPercent.textContent = `${percent}%`;
+  if (goal) {
+    const left = Math.max(0, goal - words);
+    goalText.textContent = left ? `目标 ${goal} 字，还差 ${left} 字。` : `目标 ${goal} 字，已经完成啦。`;
+    goalSummaryText.textContent = left ? `再写 ${left} 字就到目标。` : "已经达到今天的写作目标。";
+  } else {
+    goalText.textContent = "设置目标字数后，这里会显示进度。";
+    goalSummaryText.textContent = "还没有设置目标。";
+  }
+}
+function renderVersions() {
+  const entry = getActiveEntry();
+  const versions = (entry?.versions || []).slice().reverse();
+  if (!versionList) return;
+  if (!versions.length) {
+    versionList.innerHTML = `<div class="version-empty">还没有历史版本。保存几次正文变化后，这里会出现旧内容。</div>`;
+    return;
+  }
+  versionList.innerHTML = versions.map((version, index) => {
+    const text = plainTextFromHtml(version.body).slice(0, 58) || "这个版本没有文字";
+    return `<button class="version-item" data-restore-version="${versions.length - 1 - index}" type="button"><strong>${formatTimeLabel(version.savedAt)}</strong><span>${escapeHtml(text)}</span></button>`;
+  }).join("");
+}
+function restoreVersion(versionIndex) {
+  const entry = getActiveEntry();
+  const version = entry?.versions?.[Number(versionIndex)];
+  if (!entry || !version) return;
+  const confirmed = window.confirm("要把正文恢复到这个历史版本吗？现在的正文会先存成一个新版本。");
+  if (!confirmed) return;
+  const now = new Date().toISOString();
+  entry.versions.push({ body: editor.innerHTML, savedAt: now });
+  entry.body = version.body || "";
+  entry.updatedAt = now;
+  saveEntries();
+  renderEditor();
+  renderEntryList();
+  setStatus("已经恢复到选中的历史版本。");
+}
+function restoreLatestVersion() {
+  const entry = getActiveEntry();
+  if (!entry?.versions?.length) {
+    setStatus("现在还没有可以恢复的历史版本。");
+    return;
+  }
+  restoreVersion(entry.versions.length - 1);
+}
+function makeRandomTitle() {
+  const word = helperWords[Math.floor(Math.random() * helperWords.length)];
+  const idea = titleIdeas[Math.floor(Math.random() * titleIdeas.length)];
+  titleInput.value = `${word}的${idea}`;
+  scheduleSave();
+  setStatus("已经生成一个新标题。");
 }
 function renderVisitStats(stats) {
   if (!stats) return;
@@ -873,6 +971,8 @@ function bindEvents() {
   $("#sendSmsBtn").addEventListener("click", sendLetterBySms);
   $("#todayBtn").addEventListener("click", () => { dateInput.value = todayString(); scheduleSave(); });
   $("#clearSearchBtn").addEventListener("click", () => { searchInput.value = ""; renderEntryList(); });
+  $("#randomTitleBtn").addEventListener("click", makeRandomTitle);
+  $("#restoreLatestVersionBtn").addEventListener("click", restoreLatestVersion);
   searchInput.addEventListener("input", renderEntryList);
   document.querySelectorAll("[data-library-filter]").forEach((button) => button.addEventListener("click", () => {
     libraryFilter = button.dataset.libraryFilter;
@@ -883,7 +983,10 @@ function bindEvents() {
     renderContextFields();
     scheduleSave();
   });
-  [titleInput, docTypeSelect, dateInput, moodSelect, weatherSelect, tagsInput, blogSlugInput, blogStatusSelect, blogSummaryInput, letterPhoneInput, letterGreetingInput].forEach((node) => node.addEventListener("input", scheduleSave));
+  [titleInput, docTypeSelect, dateInput, moodSelect, weatherSelect, tagsInput, wordGoalInput, blogSlugInput, blogStatusSelect, blogSummaryInput, letterPhoneInput, letterGreetingInput].forEach((node) => node.addEventListener("input", () => {
+    updateCounts();
+    scheduleSave();
+  }));
   editor.addEventListener("input", () => { updateCounts(); scheduleSave(); });
   $("#colorInput").addEventListener("input", (event) => { editor.style.color = event.target.value; scheduleSave(); });
   $("#sizeInput").addEventListener("input", (event) => { editor.style.fontSize = `${event.target.value}px`; scheduleSave(); });
@@ -899,12 +1002,22 @@ function bindEvents() {
       deleteEntry(deleteButton.dataset.deleteEntry);
       return;
     }
+    const favoriteButton = event.target.closest("[data-toggle-favorite]");
+    if (favoriteButton) {
+      toggleFavorite(favoriteButton.dataset.toggleFavorite);
+      return;
+    }
     const openButton = event.target.closest("[data-open-entry]");
     if (!openButton) return;
     collectActiveEntry();
     activeId = openButton.dataset.openEntry;
     saveEntries();
     renderAll();
+  });
+  versionList.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-restore-version]");
+    if (!button) return;
+    restoreVersion(button.dataset.restoreVersion);
   });
   imageGrid.addEventListener("input", (event) => {
     if (!event.target.matches("[data-image-note]")) return;

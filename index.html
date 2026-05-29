@@ -71,6 +71,7 @@
             <button class="library-tab" data-library-filter="note" type="button">笔记</button>
             <button class="library-tab" data-library-filter="blog" type="button">博客</button>
             <button class="library-tab" data-library-filter="letter" type="button">写信</button>
+            <button class="library-tab" data-library-filter="favorite" type="button">收藏</button>
           </div>
           <label class="field-label" for="searchInput">搜索</label>
           <input id="searchInput" class="text-input directory-search" type="search" placeholder="标题、正文、标签">
@@ -99,6 +100,7 @@
               <span>标题</span>
               <input id="titleInput" class="text-input" type="text" placeholder="给今天起个名字">
             </label>
+            <button id="randomTitleBtn" class="soft-button meta-button" type="button">随机标题</button>
             <label class="field-group">
               <span>日期</span>
               <input id="dateInput" class="text-input" type="text" inputmode="numeric" placeholder="2026-05-23">
@@ -114,6 +116,10 @@
             <label class="field-group wide-field">
               <span>标签</span>
               <input id="tagsInput" class="text-input" type="text" placeholder="学习, 旅行, 开心">
+            </label>
+            <label class="field-group">
+              <span>目标字数</span>
+              <input id="wordGoalInput" class="text-input" type="number" inputmode="numeric" min="0" max="50000" step="50" placeholder="比如 500">
             </label>
           </div>
           <div id="blogFields" class="context-fields" hidden>
@@ -164,6 +170,10 @@
             <span id="statusText">准备好了</span>
             <span id="wordCount">0 字</span>
           </div>
+          <div class="goal-bar" aria-label="写作目标进度">
+            <span id="goalBarFill"></span>
+          </div>
+          <p id="goalText" class="goal-text">设置目标字数后，这里会显示进度。</p>
         </div>
         <div class="panel image-panel">
           <div class="panel-title-row">
@@ -190,6 +200,18 @@
             <div><dt>标签</dt><dd id="statTags">0</dd></div>
             <div><dt>版本</dt><dd id="statVersions">0</dd></div>
           </dl>
+          <div class="goal-summary">
+            <strong id="goalPercent">0%</strong>
+            <span id="goalSummaryText">还没有设置目标。</span>
+          </div>
+        </div>
+        <div class="panel version-panel">
+          <div class="panel-title-row">
+            <h2>历史版本</h2>
+            <button id="restoreLatestVersionBtn" class="tiny-button" type="button">恢复上版</button>
+          </div>
+          <p class="version-note">每次正文变化并保存时，会留下旧版本，写错了可以找回来。</p>
+          <div id="versionList" class="version-list"></div>
         </div>
         <div class="panel visitor-panel">
           <div class="panel-title-row">
