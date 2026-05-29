@@ -604,8 +604,10 @@ function toggleFocusMode() {
 }
 function renderVisitStats(stats) {
   if (!stats) return;
-  visitTotalCount.textContent = Number(stats.totalVisits || 0);
-  visitUniqueCount.textContent = Number(stats.uniqueVisitors || 0);
+  const visibleTotal = Math.max(0, Number(stats.totalVisits || 0) - 1);
+  const visibleUnique = Math.max(0, Number(stats.uniqueVisitors || 0) - 1);
+  visitTotalCount.textContent = visibleTotal;
+  visitUniqueCount.textContent = visibleUnique;
   const storageNames = {
     upstash: "云端",
     local: "本机",
@@ -613,8 +615,8 @@ function renderVisitStats(stats) {
   };
   visitorStorageBadge.textContent = storageNames[stats.storage] || "记录中";
   visitorNote.textContent = stats.storage === "upstash"
-    ? "现在使用云端记录，不同设备都能一起统计。"
-    : "现在是备用记录；配置 Upstash/Vercel KV 后可以变成稳定云端统计。";
+    ? "已经减去你自己的 1 次访问，只显示别人来的数量。"
+    : "已经减去你自己的 1 次访问；现在是备用记录，云端配置后会更稳定。";
 }
 async function recordVisit() {
   try {
