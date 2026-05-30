@@ -5,7 +5,10 @@ const AI_HISTORY_KEY = "diary-record-app.ai-history.v1";
 const AI_THREAD_KEY = "diary-record-app.ai-thread-id.v1";
 const VISITOR_ID_KEY = "diary-record-app.visitor-id.v1";
 const TIMER_KEY = "diary-record-app.timer-seconds.v1";
+const MEMBERSHIP_KEY = "diary-record-app.membership.v1";
 const AUTOSAVE_DELAY = 500;
+const TRIAL_DAYS = 2;
+const FREE_ACCESS_MODE = true;
 const documentTypes = [
   { value: "diary", label: "日记", title: "新的日记" },
   { value: "note", label: "写作笔记", title: "新的写作笔记" },
@@ -95,6 +98,10 @@ const imageGrid = $("#imageGrid");
 const versionList = $("#versionList");
 const timerDisplay = $("#timerDisplay");
 const timerBadge = $("#timerBadge");
+const planNameBadge = $("#planNameBadge");
+const membershipStateText = $("#membershipStateText");
+const trialDaysLeft = $("#trialDaysLeft");
+const membershipNote = $("#membershipNote");
 const aiPreview = $("#aiPreview");
 const aiInstructionInput = $("#aiInstructionInput");
 const aiHistoryList = $("#aiHistoryList");
@@ -601,6 +608,32 @@ function toggleFocusMode() {
   const isFocus = document.body.classList.contains("focus-mode");
   $("#focusModeBtn").textContent = isFocus ? "退出专注" : "专注模式";
   setStatus(isFocus ? "已经进入专注模式。" : "已经退出专注模式。");
+}
+function loadMembershipState() {
+  let state = null;
+  try {
+    state = JSON.parse(localStorage.getItem(MEMBERSHIP_KEY) || "null");
+  } catch (error) {
+    state = null;
+  }
+  if (!state?.startedAt) {
+    state = { startedAt: new Date().toISOString(), plan: "free" };
+    localStorage.setItem(MEMBERSHIP_KEY, JSON.stringify(state));
+  }
+  renderMembershipState(state);
+}
+function renderMembershipState(state) {
+  const startedAt = new Date(state.startedAt || Date.now()).getTime();
+  const usedDays = Math.max(0, Math.floor((Date.now() - startedAt) / 86400000));
+  const leftDays = Math.max(0, TRIAL_DAYS - usedDays);
+  planNameBadge.textContent = FREE_ACCESS_MODE ? "免费" : "试用";
+  membershipStateText.textContent = FREE_ACCESS_MODE ? "免费使用中" : (leftDays ? "试用中" : "试用结束");
+  trialDaysLeft.textContent = FREE_ACCESS_MODE
+    ? `试用 ${TRIAL_DAYS} 天的规则已准备好，现在免费开放。`
+    : (leftDays ? `试用还剩 ${leftDays} 天。` : "试用已结束，之后可以接会员。");
+  membershipNote.textContent = FREE_ACCESS_MODE
+    ? "现在不会限制写作、AI、导出和同步。以后你定好会员规则，再把免费开关关掉。"
+    : "会员入口还没有开启。";
 }
 function renderVisitStats(stats) {
   if (!stats) return;
@@ -1205,6 +1238,7 @@ function boot() {
   loadEntries();
   loadAiHistory();
   loadWritingTimer();
+  loadMembershipState();
   renderTemplates();
   renderPrompt();
   setupVoice();

@@ -52,7 +52,7 @@ p { margin: 4px 0 0; color: var(--muted); }
 .action-group { display: flex; align-items: center; gap: 8px; padding: 6px; border: 1px solid rgba(234, 211, 189, 0.72); border-radius: 10px; background: rgba(255, 255, 255, 0.58); }
 .workspace { display: grid; grid-template-columns: 330px minmax(520px, 1fr) 300px; gap: 18px; align-items: start; position: relative; z-index: 1; }
 .panel { background: rgba(255, 250, 243, 0.94); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); backdrop-filter: blur(10px); }
-.compact-panel, .list-panel, .ai-panel, .prompt-panel, .stats-panel, .timer-panel, .image-panel, .editor-panel, .version-panel { padding: 14px; }
+.compact-panel, .list-panel, .ai-panel, .prompt-panel, .stats-panel, .timer-panel, .membership-panel, .image-panel, .editor-panel, .version-panel { padding: 14px; }
 .sidebar, .helper-area, .editor-area { display: grid; gap: 16px; }
 .sidebar { position: sticky; top: 16px; align-self: start; }
 .helper-area { position: sticky; top: 16px; align-self: start; }
@@ -146,6 +146,10 @@ p { margin: 4px 0 0; color: var(--muted); }
 .goal-summary span { color: var(--muted); font-size: 12px; line-height: 1.5; }
 .timer-display { border: 1px solid var(--line); border-radius: 8px; background: #fff; padding: 14px 10px; font-size: 34px; font-weight: 800; text-align: center; color: var(--accent); font-variant-numeric: tabular-nums; }
 .timer-actions { margin-top: 10px; }
+.membership-box { display: grid; gap: 4px; border: 1px solid var(--line); border-radius: 8px; background: #fff; padding: 11px; }
+.membership-box strong { color: var(--accent); font-size: 18px; }
+.membership-box span, .membership-note { color: var(--muted); font-size: 12px; line-height: 1.55; }
+.membership-note { margin-top: 10px; }
 .version-note { font-size: 12px; line-height: 1.55; margin-bottom: 10px; }
 .version-list { display: grid; gap: 8px; max-height: 220px; overflow: auto; padding-right: 2px; }
 .version-item { width: 100%; display: grid; gap: 4px; border: 1px solid var(--line); border-radius: 8px; padding: 9px; background: #fff; color: var(--ink); text-align: left; }
