@@ -149,6 +149,7 @@ p { margin: 4px 0 0; color: var(--muted); }
 .membership-box { display: grid; gap: 4px; border: 1px solid var(--line); border-radius: 8px; background: #fff; padding: 11px; }
 .membership-box strong { color: var(--accent); font-size: 18px; }
 .membership-box span, .membership-note { color: var(--muted); font-size: 12px; line-height: 1.55; }
+.membership-actions { margin-top: 10px; }
 .membership-note { margin-top: 10px; }
 .version-note { font-size: 12px; line-height: 1.55; margin-bottom: 10px; }
 .version-list { display: grid; gap: 8px; max-height: 220px; overflow: auto; padding-right: 2px; }

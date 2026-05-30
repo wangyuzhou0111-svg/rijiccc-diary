@@ -102,6 +102,9 @@ const planNameBadge = $("#planNameBadge");
 const membershipStateText = $("#membershipStateText");
 const trialDaysLeft = $("#trialDaysLeft");
 const membershipNote = $("#membershipNote");
+const demoMonthlyBtn = $("#demoMonthlyBtn");
+const demoYearlyBtn = $("#demoYearlyBtn");
+const resetPlanBtn = $("#resetPlanBtn");
 const aiPreview = $("#aiPreview");
 const aiInstructionInput = $("#aiInstructionInput");
 const aiHistoryList = $("#aiHistoryList");
@@ -626,6 +629,14 @@ function renderMembershipState(state) {
   const startedAt = new Date(state.startedAt || Date.now()).getTime();
   const usedDays = Math.max(0, Math.floor((Date.now() - startedAt) / 86400000));
   const leftDays = Math.max(0, TRIAL_DAYS - usedDays);
+  if (state.plan === "monthly" || state.plan === "yearly") {
+    const planText = state.plan === "monthly" ? "月会员" : "年会员";
+    planNameBadge.textContent = `${planText}模拟`;
+    membershipStateText.textContent = `${planText}已模拟开通`;
+    trialDaysLeft.textContent = "这是测试状态，没有真的收钱。";
+    membershipNote.textContent = "以后接真实支付时，可以把这里换成支付成功后的会员状态。";
+    return;
+  }
   planNameBadge.textContent = FREE_ACCESS_MODE ? "免费" : "试用";
   membershipStateText.textContent = FREE_ACCESS_MODE ? "免费使用中" : (leftDays ? "试用中" : "试用结束");
   trialDaysLeft.textContent = FREE_ACCESS_MODE
@@ -634,6 +645,26 @@ function renderMembershipState(state) {
   membershipNote.textContent = FREE_ACCESS_MODE
     ? "现在不会限制写作、AI、导出和同步。以后你定好会员规则，再把免费开关关掉。"
     : "会员入口还没有开启。";
+}
+function setDemoMembership(plan) {
+  const state = {
+    startedAt: new Date().toISOString(),
+    plan,
+    updatedAt: new Date().toISOString(),
+  };
+  localStorage.setItem(MEMBERSHIP_KEY, JSON.stringify(state));
+  renderMembershipState(state);
+  setStatus(plan === "yearly" ? "已经模拟开通年会员。" : "已经模拟开通月会员。");
+}
+function resetMembershipPlan() {
+  const state = {
+    startedAt: new Date().toISOString(),
+    plan: "free",
+    updatedAt: new Date().toISOString(),
+  };
+  localStorage.setItem(MEMBERSHIP_KEY, JSON.stringify(state));
+  renderMembershipState(state);
+  setStatus("已经恢复为免费状态。");
 }
 function renderVisitStats(stats) {
   if (!stats) return;
@@ -1109,6 +1140,9 @@ function bindEvents() {
   $("#timerPauseBtn").addEventListener("click", pauseWritingTimer);
   $("#timerResetBtn").addEventListener("click", resetWritingTimer);
   $("#focusModeBtn").addEventListener("click", toggleFocusMode);
+  demoMonthlyBtn.addEventListener("click", () => setDemoMembership("monthly"));
+  demoYearlyBtn.addEventListener("click", () => setDemoMembership("yearly"));
+  resetPlanBtn.addEventListener("click", resetMembershipPlan);
   searchInput.addEventListener("input", renderEntryList);
   sortSelect.addEventListener("change", renderEntryList);
   document.querySelectorAll("[data-library-filter]").forEach((button) => button.addEventListener("click", () => {
